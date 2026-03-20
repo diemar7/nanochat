@@ -26,7 +26,9 @@
       "Bash(node:*)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh repo:*)",
+      "Bash(git push:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

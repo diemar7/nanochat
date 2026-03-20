@@ -18,10 +18,9 @@ export default function LoginPage() {
 
     const supabase = getSupabase()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-    console.log('login error:', JSON.stringify(error))
 
     if (error) {
-      setError(error.message)
+      setError('Email o contraseña incorrectos')
       setLoading(false)
     } else {
       router.replace('/chat')
