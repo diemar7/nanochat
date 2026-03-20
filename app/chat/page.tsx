@@ -1,17 +1,16 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
-import type { Message, Person } from '@/lib/types'
+import type { Person, Conversation } from '@/lib/types'
 
 export default function ChatPage() {
   const router = useRouter()
   const [me, setMe] = useState<Person | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [people, setPeople] = useState<Person[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -20,54 +19,80 @@ export default function ChatPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.replace('/login'); return }
 
-      const { data: person } = await supabase
-        .from('people')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-
+      const { data: person } = await supabase.from('people').select('*').eq('id', session.user.id).single()
       if (!person) { router.replace('/login'); return }
       setMe(person as Person)
 
-      const { data: msgs } = await supabase
-        .from('messages')
-        .select('*, people(id, name)')
-        .order('created_at', { ascending: true })
-        .limit(100)
+      // Cargar todas las personas para mostrar nombres
+      const { data: allPeople } = await supabase.from('people').select('*')
+      const peopleList = (allPeople as Person[]) || []
+      setPeople(peopleList)
 
-      setMessages((msgs as Message[]) || [])
+      // Cargar conversaciones 1 a 1 donde participo
+      const { data: memberships } = await supabase
+        .from('conversation_members')
+        .select('conversation_id')
+        .eq('person_id', session.user.id)
+
+      const convIds = (memberships || []).map((m: { conversation_id: string }) => m.conversation_id)
+
+      if (convIds.length > 0) {
+        const { data: convs } = await supabase
+          .from('conversations')
+          .select('*')
+          .in('id', convIds)
+          .eq('is_group', false)
+
+        // Para cada conversación 1 a 1, encontrar el otro participante
+        const { data: allMembers } = await supabase
+          .from('conversation_members')
+          .select('conversation_id, person_id')
+          .in('conversation_id', convIds)
+
+        const convsWithOther = ((convs as Conversation[]) || []).map(conv => {
+          const otherMember = (allMembers || []).find(
+            (m: { conversation_id: string; person_id: string }) =>
+              m.conversation_id === conv.id && m.person_id !== session.user.id
+          )
+          const other = peopleList.find(p => p.id === otherMember?.person_id) || null
+          return { ...conv, other }
+        })
+
+        setConversations(convsWithOther)
+      }
+
+      setLoading(false)
     }
 
     init()
-
-    const channel = supabase
-      .channel('messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, async (payload) => {
-        const { data } = await supabase
-          .from('messages')
-          .select('*, people(id, name)')
-          .eq('id', payload.new.id)
-          .single()
-        if (data) setMessages(prev => [...prev, data as Message])
-      })
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
   }, [router])
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  async function sendMessage(e: React.FormEvent) {
-    e.preventDefault()
-    if (!input.trim() || !me || sending) return
-
-    setSending(true)
+  async function startConversation(other: Person) {
+    if (!me) return
     const supabase = getSupabase()
-    await supabase.from('messages').insert({ user_id: me.id, content: input.trim() })
-    setInput('')
-    setSending(false)
+
+    // Verificar si ya existe una conversación 1 a 1 con esta persona
+    const existing = conversations.find(c => c.other?.id === other.id)
+    if (existing) {
+      router.push(`/chat/${existing.id}`)
+      return
+    }
+
+    // Crear nueva conversación
+    const { data: conv } = await supabase
+      .from('conversations')
+      .insert({ is_group: false })
+      .select()
+      .single() as { data: Conversation | null }
+
+    if (!conv) return
+
+    await supabase.from('conversation_members').insert([
+      { conversation_id: conv.id, person_id: me.id },
+      { conversation_id: conv.id, person_id: other.id },
+    ])
+
+    router.push(`/chat/${conv.id}`)
   }
 
   async function logout() {
@@ -76,10 +101,7 @@ export default function ChatPage() {
     router.replace('/login')
   }
 
-  function formatTime(ts: string | null) {
-    if (!ts) return ''
-    return new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
-  }
+  const otherPeople = people.filter(p => p.id !== me?.id)
 
   return (
     <div className="h-full flex flex-col bg-gray-100">
@@ -94,64 +116,61 @@ export default function ChatPage() {
         </div>
         <div className="flex items-center gap-3">
           {me?.is_admin && (
-            <button
-              onClick={() => router.push('/admin')}
-              className="text-white/80 hover:text-white text-sm px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 transition"
-            >
+            <button onClick={() => router.push('/admin')} className="text-white/80 hover:text-white text-sm px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 transition">
               👥 Admin
             </button>
           )}
-          <button
-            onClick={logout}
-            className="text-white/80 hover:text-white text-sm"
-          >
-            Salir
-          </button>
+          <button onClick={logout} className="text-white/80 hover:text-white text-sm">Salir</button>
         </div>
       </div>
 
-      {/* Mensajes */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-        {messages.map(msg => {
-          const isMe = msg.user_id === me?.id
-          return (
-            <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
-                {!isMe && (
-                  <span className="text-xs text-gray-500 px-1">{msg.people?.name}</span>
-                )}
-                <div className={`px-4 py-2 rounded-2xl text-sm shadow-sm ${
-                  isMe
-                    ? 'bg-gradient-to-br from-violet-600 to-purple-600 text-white rounded-br-sm'
-                    : 'bg-white text-gray-800 rounded-bl-sm'
-                }`}>
-                  {msg.content}
-                </div>
-                <span className="text-xs text-gray-400 px-1">{formatTime(msg.created_at)}</span>
-              </div>
+      <div className="flex-1 overflow-y-auto">
+        {/* Chat grupal */}
+        <div className="px-4 pt-4 pb-2">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Grupo</p>
+          <button
+            onClick={() => router.push('/chat/group')}
+            className="w-full bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm hover:shadow-md transition"
+          >
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xl">
+              👨‍👩‍👦
             </div>
-          )
-        })}
-        <div ref={bottomRef} />
-      </div>
+            <div className="text-left">
+              <p className="font-semibold text-gray-800">Familia</p>
+              <p className="text-xs text-gray-400">Chat grupal</p>
+            </div>
+          </button>
+        </div>
 
-      {/* Input */}
-      <form onSubmit={sendMessage} className="px-4 py-3 bg-white border-t border-gray-200 flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="Escribí un mensaje..."
-          className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm"
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || sending}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-purple-600 text-white disabled:opacity-50 transition"
-        >
-          ➤
-        </button>
-      </form>
+        {/* Chats 1 a 1 */}
+        <div className="px-4 pt-2 pb-4">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Mensajes directos</p>
+          <div className="space-y-2">
+            {loading ? (
+              <div className="flex justify-center py-4">
+                <div className="w-6 h-6 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : otherPeople.map(person => {
+              const existing = conversations.find(c => c.other?.id === person.id)
+              return (
+                <button
+                  key={person.id}
+                  onClick={() => startConversation(person)}
+                  className="w-full bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm hover:shadow-md transition"
+                >
+                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                    {person.name[0].toUpperCase()}
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold text-gray-800">{person.name}</p>
+                    <p className="text-xs text-gray-400">{existing ? 'Conversación activa' : 'Iniciar chat'}</p>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
