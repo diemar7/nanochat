@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Message, Person } from '@/lib/types'
+import { notifyAll } from '@/lib/notify'
 
 export default function DirectChatPage() {
   const router = useRouter()
@@ -74,6 +75,10 @@ export default function DirectChatPage() {
     setSending(true)
     const supabase = getSupabase()
     await supabase.from('messages').insert({ user_id: me.id, content: input.trim(), conversation_id: convId })
+
+    // Notificar al otro
+    if (other?.ntfy_channel) notifyAll([other.ntfy_channel], me.name, input.trim())
+
     setInput('')
     setSending(false)
   }

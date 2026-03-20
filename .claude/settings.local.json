@@ -28,7 +28,11 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(gh repo:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "mcp__supabase__get_project",
+      "mcp__supabase__get_advisors",
+      "mcp__supabase__pause_project",
+      "mcp__supabase__restore_project"
     ]
   },
   "enableAllProjectMcpServers": true,

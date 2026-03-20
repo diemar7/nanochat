@@ -87,6 +87,7 @@ export type Database = {
           id: string
           is_admin: boolean | null
           name: string
+          ntfy_channel: string | null
         }
         Insert: {
           created_at?: string | null
@@ -94,6 +95,7 @@ export type Database = {
           id: string
           is_admin?: boolean | null
           name: string
+          ntfy_channel?: string | null
         }
         Update: {
           created_at?: string | null
@@ -101,6 +103,7 @@ export type Database = {
           id?: string
           is_admin?: boolean | null
           name?: string
+          ntfy_channel?: string | null
         }
         Relationships: []
       }
