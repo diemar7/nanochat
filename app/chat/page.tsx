@@ -161,7 +161,7 @@ export default function ChatPage() {
           </div>
 
           {/* Personaje desbordando la card */}
-          <div className="absolute -top-10 right-2 w-36 h-36 select-none pointer-events-none">
+          <div className="absolute -top-6 right-3 w-28 h-28 select-none pointer-events-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/nano-character.png"
