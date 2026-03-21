@@ -161,8 +161,14 @@ export default function ChatPage() {
           </div>
 
           {/* Personaje desbordando la card */}
-          <div className="absolute -top-8 right-4 text-8xl leading-none select-none" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }}>
-            🧒
+          <div className="absolute -top-10 right-2 w-36 h-36 select-none pointer-events-none">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/nano-character.png"
+              alt="Nano"
+              className="w-full h-full object-contain"
+              style={{ filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.5))' }}
+            />
           </div>
         </div>
       </div>
