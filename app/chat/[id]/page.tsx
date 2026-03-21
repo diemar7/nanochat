@@ -94,17 +94,28 @@ export default function DirectChatPage() {
   }
 
   return (
-    <div className="h-full flex flex-col" style={{ backgroundColor: '#f0faf4' }}>
+    <div className="flex flex-col" style={{ height: '100dvh', backgroundColor: '#f0faf4' }}>
 
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 shadow-sm" style={{ backgroundColor: '#1a7a4a' }}>
-        <button onClick={() => router.push('/chat')} className="text-white/80 hover:text-white text-xl w-8">←</button>
-        <div className="w-9 h-9 rounded-full bg-emerald-400 flex items-center justify-center text-white font-bold text-base">
-          {other?.name[0].toUpperCase() || '?'}
+      <div className="flex-shrink-0 relative" style={{ backgroundColor: '#1a7a4a' }}>
+        <div className="flex items-center gap-3 px-4 pt-4 pb-5">
+          <button onClick={() => router.push('/chat')} className="text-white/80 hover:text-white text-xl w-8 flex-shrink-0">←</button>
+          <div className="relative flex-shrink-0">
+            <div className="absolute inset-0 rounded-full blur-sm" style={{ backgroundColor: 'rgba(163,230,53,0.35)', transform: 'scale(1.2)' }} />
+            <div className="relative w-11 h-11 rounded-full border-2 flex items-center justify-center text-white font-bold text-lg"
+              style={{ backgroundColor: '#0f5c35', borderColor: '#a3e635' }}>
+              {other?.name[0].toUpperCase() || '?'}
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-black text-lg leading-tight truncate">{other?.name || '...'}</p>
+            <p className="text-white/50 text-xs">Mensaje directo</p>
+          </div>
         </div>
-        <div className="flex-1">
-          <p className="text-white font-bold leading-none">{other?.name || '...'}</p>
-          <p className="text-white/60 text-xs">Mensaje directo</p>
+        <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none">
+          <svg viewBox="0 0 390 16" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full" style={{ height: '16px' }}>
+            <path d="M0,8 C80,16 160,0 240,8 C310,15 355,4 390,8 L390,16 L0,16 Z" fill="#f0faf4" />
+          </svg>
         </div>
       </div>
 
