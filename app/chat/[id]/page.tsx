@@ -15,6 +15,7 @@ export default function DirectChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [otherTyping, setOtherTyping] = useState(false)
   const [headerHeight, setHeaderHeight] = useState(80)
   const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -22,6 +23,9 @@ export default function DirectChatPage() {
   const isAtBottomRef = useRef(true)
   const headerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLDivElement>(null)
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const presenceChannelRef = useRef<any>(null)
 
   usePushSubscription(me?.id ?? null)
 
@@ -85,6 +89,39 @@ export default function DirectChatPage() {
     return () => { supabase2.removeChannel(channel) }
   }, [router, convId])
 
+  // Canal de presence para "escribiendo..."
+  useEffect(() => {
+    if (!me) return
+    const supabase = getSupabase()
+    const channel = supabase.channel(`typing-${convId}`, { config: { presence: { key: me.id } } })
+    presenceChannelRef.current = channel
+
+    channel
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState<{ typing: boolean }>()
+        const otherTypingNow = Object.entries(state).some(
+          ([key, presences]) => key !== me.id && presences.some(p => p.typing)
+        )
+        setOtherTyping(otherTypingNow)
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [me, convId])
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setInput(e.target.value)
+    // Broadcast que estoy escribiendo
+    const channel = presenceChannelRef.current
+    if (channel && me) {
+      channel.track({ typing: true })
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
+      typingTimeoutRef.current = setTimeout(() => {
+        channel.track({ typing: false })
+      }, 2000)
+    }
+  }
+
   useEffect(() => {
     if (isAtBottomRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -138,7 +175,7 @@ export default function DirectChatPage() {
           <input
             type="text"
             value={input}
-            onChange={e => setInput(e.target.value)}
+            onChange={handleInputChange}
             placeholder={`Escribile a ${other?.name || ''}...`}
             autoComplete="off"
             className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 text-sm bg-gray-50"
@@ -181,6 +218,15 @@ export default function DirectChatPage() {
             </div>
           )
         })}
+        {otherTyping && (
+          <div className="flex justify-start">
+            <div className="bg-white rounded-2xl rounded-bl-sm px-4 py-2.5 shadow-sm flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+              <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+              <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
     </div>
