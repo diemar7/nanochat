@@ -118,7 +118,7 @@ export default function DirectChatPage() {
     return () => { supabase.removeChannel(channel) }
   }, [other, convId])
 
-  // Canal de presence para "escribiendo..."
+  // Canal de presence para "escribiendo..." y "leyendo"
   useEffect(() => {
     if (!me) return
     const supabase = getSupabase()
@@ -127,13 +127,24 @@ export default function DirectChatPage() {
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState<{ typing: boolean }>()
+        const state = channel.presenceState<{ typing: boolean; readAt?: string }>()
         const otherTypingNow = Object.entries(state).some(
           ([key, presences]) => key !== me.id && presences.some(p => p.typing)
         )
         setOtherTyping(otherTypingNow)
+        // Si el otro está en el chat, actualizar su last_read_at
+        Object.entries(state).forEach(([key, presences]) => {
+          if (key !== me.id) {
+            const readAt = presences[presences.length - 1]?.readAt
+            if (readAt) setOtherLastRead(readAt)
+          }
+        })
       })
-      .subscribe()
+      .subscribe(async () => {
+        // Trackear que estoy leyendo este chat
+        const now = new Date().toISOString()
+        channel.track({ typing: false, readAt: now })
+      })
 
     return () => { supabase.removeChannel(channel) }
   }, [me, convId])
@@ -252,7 +263,7 @@ export default function DirectChatPage() {
                 <div className="flex items-center gap-1 px-1">
                   <span className="text-xs text-gray-400">{formatTime(msg.created_at)}</span>
                   {isMe && (
-                    <span className="text-xs leading-none" style={{ color: isRead ? '#a3e635' : 'rgba(0,0,0,0.25)' }}>✓</span>
+                    <span className="text-xs leading-none" style={{ color: isRead ? '#1a7a4a' : 'rgba(0,0,0,0.25)' }}>✓</span>
                   )}
                 </div>
               </div>
