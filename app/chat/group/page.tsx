@@ -86,10 +86,10 @@ export default function GroupChatPage() {
   const COLORS = ['bg-emerald-400', 'bg-teal-400', 'bg-cyan-400', 'bg-lime-500', 'bg-green-400']
 
   return (
-    <div className="flex flex-col" style={{ height: '100svh', backgroundColor: '#f0faf4' }}>
+    <div className="flex flex-col" style={{ height: '100dvh', backgroundColor: '#f0faf4' }}>
 
       {/* Header */}
-      <div className="flex-shrink-0 relative" style={{ backgroundColor: '#1a7a4a' }}>
+      <div className="flex-shrink-0 relative sticky top-0 z-10" style={{ backgroundColor: '#1a7a4a' }}>
         <div className="flex items-center gap-3 px-4 pt-4 pb-5">
           <button onClick={() => router.push('/chat')} className="text-xl w-8 flex-shrink-0 font-bold" style={{ color: '#a3e635' }}>←</button>
           <div className="relative flex-shrink-0">
@@ -148,6 +148,7 @@ export default function GroupChatPage() {
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Escribí un mensaje..."
+          autoComplete="off"
           className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 text-sm bg-gray-50"
           style={{ '--tw-ring-color': '#1a7a4a' } as React.CSSProperties}
         />
