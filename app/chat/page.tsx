@@ -13,6 +13,13 @@ const AVATAR_COLORS = [
   'bg-green-400',
 ]
 
+function greeting(name: string) {
+  const h = new Date().getHours()
+  if (h < 12) return `¡Buenos días, ${name}! ☀️`
+  if (h < 19) return `¡Buenas tardes, ${name}! 👋`
+  return `¡Buenas noches, ${name}! 🌙`
+}
+
 export default function ChatPage() {
   const router = useRouter()
   const [me, setMe] = useState<Person | null>(null)
@@ -107,54 +114,76 @@ export default function ChatPage() {
   const otherPeople = people.filter(p => p.id !== me?.id)
 
   return (
-    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: '#0a2a1a' }}>
+    <div className="h-full flex flex-col overflow-hidden bg-white">
 
-      {/* Header — perfil del usuario */}
-      <header className="px-5 pt-10 pb-6">
-        <div className="flex items-center gap-4 mb-5">
-          {/* Avatar */}
-          <div className="w-16 h-16 rounded-full bg-emerald-700 border-2 border-emerald-400 flex items-center justify-center text-white font-black text-2xl flex-shrink-0 overflow-hidden">
-            {me?.name[0].toUpperCase() || '?'}
-          </div>
-          {/* Datos */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-white text-xl font-bold leading-tight truncate">{me?.name || '...'}</h1>
-            <p className="text-emerald-400/70 text-xs mt-0.5 truncate">{me?.email || ''}</p>
-          </div>
+      {/* ── SECCIÓN SUPERIOR ── */}
+      <div className="relative flex-shrink-0" style={{ backgroundColor: '#1a7a4a' }}>
+
+        {/* Círculos decorativos orgánicos */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.06)' }} />
+          <div className="absolute top-16 -left-8 w-32 h-32 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }} />
+          <div className="absolute -bottom-4 right-16 w-20 h-20 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }} />
         </div>
 
-        {/* Acciones */}
-        <div className="flex gap-2">
-          <button
-            className="flex-1 py-2.5 rounded-2xl text-xs font-bold tracking-widest uppercase transition active:scale-95 border border-emerald-500/30 backdrop-blur-sm"
-            style={{ backgroundColor: 'rgba(74,222,128,0.08)', color: '#4ade80', letterSpacing: '0.12em' }}
-          >
-            ◈ Perfil
-          </button>
+        {/* Botones top derecha */}
+        <div className="relative z-10 flex justify-end gap-2 px-5 pt-8 pb-0">
           {me?.is_admin && (
             <button
               onClick={() => router.push('/admin')}
-              className="flex-1 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest transition active:scale-95 border border-emerald-500/30 backdrop-blur-sm"
-              style={{ backgroundColor: 'rgba(74,222,128,0.08)', color: '#4ade80', letterSpacing: '0.12em' }}
+              className="text-xs px-3 py-1.5 rounded-full font-semibold"
+              style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }}
             >
-              ⬡ Admin
+              Admin
             </button>
           )}
           <button
             onClick={logout}
-            className="flex-1 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest transition active:scale-95 border border-emerald-500/20 backdrop-blur-sm"
-            style={{ backgroundColor: 'rgba(74,222,128,0.04)', color: '#4ade80aa', letterSpacing: '0.12em' }}
+            className="text-xs px-3 py-1.5 rounded-full font-semibold"
+            style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.85)' }}
           >
-            ⏻ Salir
+            Salir
           </button>
         </div>
-      </header>
 
-      {/* Sección inferior clara */}
-      <div className="rounded-t-3xl flex-1 overflow-y-auto px-4 pt-6 pb-10" style={{ backgroundColor: '#edf7f0' }}>
+        {/* Avatar + nombre */}
+        <div className="relative z-10 flex flex-col items-center px-5 pt-4 pb-10">
+          {/* Anillo glow + avatar */}
+          <div className="relative mb-4">
+            <div className="absolute inset-0 rounded-full blur-md" style={{ backgroundColor: 'rgba(163,230,53,0.4)', transform: 'scale(1.15)' }} />
+            <div className="relative w-24 h-24 rounded-full border-4 flex items-center justify-center font-black text-4xl"
+              style={{ backgroundColor: '#0f5c35', borderColor: '#a3e635', color: '#a3e635' }}>
+              {me?.name?.[0].toUpperCase() || '?'}
+            </div>
+            {/* Badge punto activo */}
+            <div className="absolute bottom-1 right-1 w-5 h-5 rounded-full border-2 border-white" style={{ backgroundColor: '#a3e635' }} />
+          </div>
+
+          {/* Saludo dinámico */}
+          <p className="text-white/60 text-sm font-medium mb-1">
+            {me ? greeting(me.name) : ''}
+          </p>
+
+          {/* Nombre grande */}
+          <h1 className="text-white font-black text-4xl tracking-tight leading-none text-center mb-1">
+            {me?.name?.toUpperCase() || ''}
+          </h1>
+          <p className="text-white/40 text-xs">{me?.email}</p>
+        </div>
+
+        {/* Onda SVG inferior */}
+        <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none">
+          <svg viewBox="0 0 390 40" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full" style={{ height: '40px' }}>
+            <path d="M0,20 C80,40 160,0 240,20 C310,38 355,10 390,20 L390,40 L0,40 Z" fill="#f0faf4" />
+          </svg>
+        </div>
+      </div>
+
+      {/* ── SECCIÓN INFERIOR ── */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10" style={{ backgroundColor: '#f0faf4' }}>
 
         {/* Grupos */}
-        <h2 className="font-bold text-gray-800 text-lg mb-3">Grupos</h2>
+        <h2 className="font-bold text-gray-700 text-base mb-3 px-1">Grupos</h2>
         <button
           onClick={() => router.push('/chat/group')}
           className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform hover:shadow-md mb-6"
@@ -170,7 +199,7 @@ export default function ChatPage() {
         </button>
 
         {/* Mensajes directos */}
-        <h2 className="font-bold text-gray-800 text-lg mb-3">Mensajes directos</h2>
+        <h2 className="font-bold text-gray-700 text-base mb-3 px-1">Mensajes directos</h2>
 
         {loading ? (
           <div className="flex justify-center py-8">
