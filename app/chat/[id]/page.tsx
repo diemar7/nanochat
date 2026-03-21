@@ -195,7 +195,7 @@ export default function DirectChatPage() {
       <div
         ref={messagesRef}
         className="overflow-y-auto px-4 space-y-2"
-        style={{ paddingTop: `calc(${headerHeight}px + 0.75rem)`, paddingBottom: `calc(${inputHeight}px + env(keyboard-inset-height, 0px) + 0.75rem)`, minHeight: '100dvh' }}
+        style={{ paddingTop: `calc(${headerHeight}px + 0.75rem)`, paddingBottom: `calc(${inputHeight}px + env(keyboard-inset-height, 0px) + 3rem)`, minHeight: '100dvh' }}
         onScroll={() => {
           const el = messagesRef.current
           if (!el) return
