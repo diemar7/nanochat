@@ -35,8 +35,8 @@ export function usePushSubscription(personId: string | null) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ personId, subscription: sub.toJSON() }),
         })
-      } catch {
-        // silencioso — no romper la app si falla push
+      } catch (err) {
+        console.error('[push]', err)
       }
     }
 
