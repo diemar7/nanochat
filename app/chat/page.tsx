@@ -6,11 +6,11 @@ import { getSupabase } from '@/lib/supabase'
 import type { Person, Conversation } from '@/lib/types'
 
 const AVATAR_COLORS = [
-  { bg: 'bg-emerald-400', border: 'border-emerald-300' },
-  { bg: 'bg-teal-400', border: 'border-teal-300' },
-  { bg: 'bg-cyan-400', border: 'border-cyan-300' },
-  { bg: 'bg-lime-400', border: 'border-lime-300' },
-  { bg: 'bg-green-400', border: 'border-green-300' },
+  'bg-emerald-400',
+  'bg-teal-400',
+  'bg-cyan-400',
+  'bg-lime-500',
+  'bg-green-400',
 ]
 
 export default function ChatPage() {
@@ -109,59 +109,44 @@ export default function ChatPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: '#0a2a1a' }}>
 
-      {/* Círculos decorativos de fondo */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-10" style={{ backgroundColor: '#4ade80' }} />
-        <div className="absolute top-40 -left-16 w-48 h-48 rounded-full opacity-10" style={{ backgroundColor: '#86efac' }} />
-        <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: '#4ade80' }} />
-      </div>
-
       {/* Header */}
-      <div className="relative z-20 flex items-center justify-between px-5 pt-8 pb-2">
-        <div>
-          <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Bienvenido</p>
-          <h1 className="text-white font-black text-2xl leading-tight">{me?.name || '...'} 👋</h1>
-        </div>
-        <div className="flex items-center gap-2">
-          {me?.is_admin && (
-            <button
-              onClick={() => router.push('/admin')}
-              className="text-xs px-3 py-1.5 rounded-full font-bold"
-              style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
-            >
-              Admin
-            </button>
-          )}
-          <button
-            onClick={logout}
-            className="text-xs px-3 py-1.5 rounded-full font-bold"
-            style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
-          >
-            Salir
-          </button>
-        </div>
-      </div>
-
-      {/* Hero card con personaje */}
-      <div className="relative z-10 mx-4 mt-4 mb-2">
-        <div className="rounded-3xl overflow-visible relative" style={{ backgroundColor: '#0f3d24', minHeight: '180px' }}>
-          {/* Contenido de la card */}
-          <div className="px-6 pt-6 pb-5">
-            <p className="text-emerald-300 font-bold text-xs uppercase tracking-widest mb-1">NanoChat</p>
-            <h2 className="text-white font-black text-2xl leading-tight mb-4">
-              ¿Con quién<br/>hablamos hoy?
-            </h2>
-            <button
-              onClick={() => router.push('/chat/group')}
-              className="font-black text-sm px-5 py-2.5 rounded-2xl transition active:scale-95"
-              style={{ backgroundColor: '#a3e635', color: '#0a2a1a' }}
-            >
-              Chat Familiar →
+      <header className="px-5 pt-10 pb-4">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-emerald-400 text-xs font-semibold uppercase tracking-widest">NanoChat</p>
+            <h1 className="text-white text-2xl font-bold">Hola, {me?.name || '...'} 👋</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {me?.is_admin && (
+              <button
+                onClick={() => router.push('/admin')}
+                className="text-white/70 hover:text-white text-sm transition-colors"
+              >
+                Admin
+              </button>
+            )}
+            <button onClick={logout} className="text-white/70 hover:text-white text-sm transition-colors">
+              Salir
             </button>
           </div>
+        </div>
+      </header>
 
-          {/* Personaje desbordando la card */}
-          <div className="absolute top-2 right-3 w-28 h-28 select-none pointer-events-none">
+      {/* Hero card con personaje */}
+      <div className="px-4 pb-6 relative">
+        <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-3xl p-5 shadow-xl overflow-visible relative">
+          <p className="text-white/70 text-sm mb-1">¿Con quién hablamos hoy?</p>
+          <p className="text-white text-xl font-bold mb-4">Chat familiar 💬</p>
+          <button
+            onClick={() => router.push('/chat/group')}
+            className="font-bold text-sm px-5 py-2.5 rounded-2xl transition active:scale-95"
+            style={{ backgroundColor: '#a3e635', color: '#0a2a1a' }}
+          >
+            Abrir chat grupal →
+          </button>
+
+          {/* Personaje */}
+          <div className="absolute -top-8 right-3 w-28 h-28 select-none pointer-events-none">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/nano-character.png"
@@ -173,45 +158,36 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Lista de contactos */}
-      <div className="relative z-10 flex-1 overflow-y-auto px-4 pt-2 pb-6">
-        <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest mb-3 px-1">
-          Mensajes directos
-        </p>
+      {/* Sección inferior clara */}
+      <div className="bg-gray-50 rounded-t-3xl flex-1 overflow-y-auto px-4 pt-6 pb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-gray-800 text-lg">Mensajes directos</h2>
+        </div>
 
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="w-8 h-8 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="space-y-3">
             {otherPeople.map((person, i) => {
-              const color = AVATAR_COLORS[i % AVATAR_COLORS.length]
               const existing = conversations.find(c => c.other?.id === person.id)
               return (
                 <button
                   key={person.id}
                   onClick={() => startConversation(person)}
-                  className="w-full rounded-2xl px-4 py-4 flex items-center gap-4 active:scale-95 transition-transform"
-                  style={{ backgroundColor: '#f0fdf4' }}
+                  className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform hover:shadow-md"
                 >
-                  {/* Avatar */}
-                  <div className={`w-12 h-12 rounded-2xl ${color.bg} border-2 ${color.border} flex items-center justify-center text-white font-black text-xl shadow-lg flex-shrink-0`}>
+                  <div className={`w-11 h-11 rounded-full ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
                     {person.name[0].toUpperCase()}
                   </div>
-
-                  {/* Info */}
                   <div className="flex-1 text-left">
-                    <p className="text-gray-800 font-bold text-base">{person.name}</p>
-                    <p className="text-emerald-600 text-xs font-medium mt-0.5">
+                    <p className="font-semibold text-gray-800">{person.name}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
                       {existing ? 'Conversación activa' : 'Iniciar chat'}
                     </p>
                   </div>
-
-                  {/* Flecha */}
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#bbf7d0' }}>
-                    <span className="text-emerald-700 font-black text-sm">›</span>
-                  </div>
+                  <span className="text-gray-300 text-xl">›</span>
                 </button>
               )
             })}
