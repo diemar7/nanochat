@@ -107,7 +107,7 @@ export default function GroupChatPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-black text-lg leading-tight">Familia</p>
-            <p className="text-white/50 text-xs">Chat grupal</p>
+            <p className="text-xs font-semibold" style={{ color: '#a3e635' }}>Chat grupal</p>
           </div>
           <div className="flex -space-x-2 flex-shrink-0">
             {allPeople.slice(0, 3).map((p, i) => (

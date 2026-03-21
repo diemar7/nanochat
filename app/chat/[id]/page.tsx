@@ -115,7 +115,7 @@ export default function DirectChatPage() {
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white font-black text-lg leading-tight truncate">{other?.name || '...'}</p>
-            <p className="text-white/50 text-xs">Mensaje directo</p>
+            <p className="text-xs font-semibold" style={{ color: '#a3e635' }}>Mensaje directo</p>
           </div>
         </div>
         <div className="absolute bottom-0 left-0 right-0 overflow-hidden leading-none">
