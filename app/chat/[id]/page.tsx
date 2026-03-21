@@ -94,17 +94,29 @@ export default function DirectChatPage() {
         const { data } = await supabase2.from('messages').select('*, people(id, name)').eq('id', payload.new.id).single()
         if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
       })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'read_receipts', filter: `conversation_id=eq.${convId}` }, (payload) => {
-        const row = payload.new as { person_id: string; last_read_at: string } | undefined
-        if (row && row.person_id !== undefined) {
-          // Se actualiza cuando el otro abre el chat — no sabemos el otherId acá, lo actualizamos siempre
-          setOtherLastRead(row.last_read_at)
-        }
-      })
       .subscribe()
 
     return () => { supabase2.removeChannel(channel) }
   }, [router, convId])
+
+  // Escuchar cuando el otro lee la conversación
+  useEffect(() => {
+    if (!other) return
+    const supabase = getSupabase()
+    const channel = supabase
+      .channel(`receipts-${convId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'read_receipts',
+        filter: `person_id=eq.${other.id}`,
+      }, (payload) => {
+        const row = payload.new as { conversation_id: string; last_read_at: string }
+        if (row.conversation_id === convId) setOtherLastRead(row.last_read_at)
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [other, convId])
 
   // Canal de presence para "escribiendo..."
   useEffect(() => {
@@ -240,9 +252,7 @@ export default function DirectChatPage() {
                 <div className="flex items-center gap-1 px-1">
                   <span className="text-xs text-gray-400">{formatTime(msg.created_at)}</span>
                   {isMe && (
-                    <span className="text-xs leading-none" style={{ color: isRead ? '#a3e635' : 'rgba(0,0,0,0.25)' }}>
-                      {isRead ? '✓✓' : '✓'}
-                    </span>
+                    <span className="text-xs leading-none" style={{ color: isRead ? '#a3e635' : 'rgba(0,0,0,0.25)' }}>✓</span>
                   )}
                 </div>
               </div>
