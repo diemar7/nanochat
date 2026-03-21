@@ -109,60 +109,68 @@ export default function ChatPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: '#0a2a1a' }}>
 
-      {/* Header */}
-      <header className="px-5 pt-10 pb-4">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <p className="text-emerald-400 text-xs font-semibold uppercase tracking-widest">NanoChat</p>
-            <h1 className="text-white text-2xl font-bold">Hola, {me?.name || '...'} 👋</h1>
+      {/* Header — perfil del usuario */}
+      <header className="px-5 pt-10 pb-6">
+        <div className="flex items-center gap-4 mb-5">
+          {/* Avatar */}
+          <div className="w-16 h-16 rounded-full bg-emerald-700 border-2 border-emerald-400 flex items-center justify-center text-white font-black text-2xl flex-shrink-0 overflow-hidden">
+            {me?.name[0].toUpperCase() || '?'}
           </div>
-          <div className="flex items-center gap-2">
-            {me?.is_admin && (
-              <button
-                onClick={() => router.push('/admin')}
-                className="text-white/70 hover:text-white text-sm transition-colors"
-              >
-                Admin
-              </button>
-            )}
-            <button onClick={logout} className="text-white/70 hover:text-white text-sm transition-colors">
-              Salir
+          {/* Datos */}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-white text-xl font-bold leading-tight truncate">{me?.name || '...'}</h1>
+            <p className="text-emerald-400/70 text-xs mt-0.5 truncate">{me?.email || ''}</p>
+          </div>
+        </div>
+
+        {/* Acciones */}
+        <div className="flex gap-2">
+          <button
+            className="flex-1 py-2 rounded-2xl text-sm font-semibold transition active:scale-95 text-center"
+            style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
+          >
+            Perfil
+          </button>
+          {me?.is_admin && (
+            <button
+              onClick={() => router.push('/admin')}
+              className="flex-1 py-2 rounded-2xl text-sm font-semibold transition active:scale-95"
+              style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
+            >
+              Admin
             </button>
-          </div>
+          )}
+          <button
+            onClick={logout}
+            className="flex-1 py-2 rounded-2xl text-sm font-semibold transition active:scale-95"
+            style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
+          >
+            Salir
+          </button>
         </div>
       </header>
 
-      {/* Hero card con personaje */}
-      <div className="px-4 pb-6 relative">
-        <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-3xl p-5 shadow-xl overflow-visible relative">
-          <p className="text-white/70 text-sm mb-1">¿Con quién hablamos hoy?</p>
-          <p className="text-white text-xl font-bold mb-4">Chat familiar 💬</p>
-          <button
-            onClick={() => router.push('/chat/group')}
-            className="font-bold text-sm px-5 py-2.5 rounded-2xl transition active:scale-95"
-            style={{ backgroundColor: '#a3e635', color: '#0a2a1a' }}
-          >
-            Abrir chat grupal →
-          </button>
-
-          {/* Personaje */}
-          <div className="absolute -top-8 right-3 w-28 h-28 select-none pointer-events-none">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/nano-character.png"
-              alt="Nano"
-              className="w-full h-full object-contain"
-              style={{ filter: 'drop-shadow(0 8px 20px rgba(0,0,0,0.5))' }}
-            />
-          </div>
-        </div>
-      </div>
-
       {/* Sección inferior clara */}
       <div className="bg-gray-50 rounded-t-3xl flex-1 overflow-y-auto px-4 pt-6 pb-10">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-gray-800 text-lg">Mensajes directos</h2>
-        </div>
+
+        {/* Grupos */}
+        <h2 className="font-bold text-gray-800 text-lg mb-3">Grupos</h2>
+        <button
+          onClick={() => router.push('/chat/group')}
+          className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform hover:shadow-md mb-6"
+        >
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-xl flex-shrink-0">
+            🏠
+          </div>
+          <div className="flex-1 text-left">
+            <p className="font-semibold text-gray-800">Familia</p>
+            <p className="text-xs text-gray-400 mt-0.5">Chat grupal</p>
+          </div>
+          <span className="text-gray-300 text-xl">›</span>
+        </button>
+
+        {/* Mensajes directos */}
+        <h2 className="font-bold text-gray-800 text-lg mb-3">Mensajes directos</h2>
 
         {loading ? (
           <div className="flex justify-center py-8">
