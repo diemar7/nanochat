@@ -14,7 +14,7 @@ export async function POST(req: Request) {
 
   await supabase.from('push_subscriptions').upsert(
     { person_id: personId, endpoint: subscription.endpoint, subscription },
-    { onConflict: 'endpoint' }
+    { onConflict: 'person_id,endpoint' }
   )
 
   return NextResponse.json({ ok: true })
