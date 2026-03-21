@@ -1,10 +1,20 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// @deno-types="https://esm.sh/web-push@3/index.d.ts"
+import webpush from 'https://esm.sh/web-push@3'
+
+const VAPID_PUBLIC_KEY = 'BCooHVGXBmeEk_L9tzrstSmoevS-1ZDHUhUYsE2a0K2FbYsBI-c8EK08raTjfD0jvmZe4YRqWQdg-pOzUFOfDsY'
+const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
+
+webpush.setVapidDetails(
+  'mailto:diemar7@gmail.com',
+  VAPID_PUBLIC_KEY,
+  VAPID_PRIVATE_KEY
+)
 
 Deno.serve(async (req) => {
   try {
     const payload = await req.json()
     const record = payload.record
-
     if (!record) return new Response('ok')
 
     const supabase = createClient(
@@ -12,39 +22,34 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     )
 
-    // Obtener sender
     const { data: sender } = await supabase
       .from('people')
-      .select('name, ntfy_channel')
+      .select('name')
       .eq('id', record.user_id)
       .single()
 
     if (!sender) return new Response('ok')
 
-    // Obtener todos los canales excepto el sender
-    const { data: others } = await supabase
-      .from('people')
-      .select('ntfy_channel')
-      .neq('id', record.user_id)
-      .not('ntfy_channel', 'is', null)
+    const { data: subs } = await supabase
+      .from('push_subscriptions')
+      .select('subscription')
+      .neq('person_id', record.user_id)
 
-    if (!others || others.length === 0) return new Response('ok')
+    if (!subs || subs.length === 0) return new Response('ok')
 
     const preview = record.content.length > 60
       ? record.content.slice(0, 60) + '...'
       : record.content
 
+    const notification = JSON.stringify({
+      title: `NanoChat — ${sender.name}`,
+      body: preview,
+      url: '/chat',
+    })
+
     await Promise.allSettled(
-      others.map((p: { ntfy_channel: string }) =>
-        fetch(`https://ntfy.sh/${p.ntfy_channel}`, {
-          method: 'POST',
-          headers: {
-            'Title': `NanoChat — ${sender.name}`,
-            'Priority': 'default',
-            'Tags': 'speech_balloon',
-          },
-          body: preview,
-        })
+      subs.map((row: { subscription: webpush.PushSubscription }) =>
+        webpush.sendNotification(row.subscription, notification)
       )
     )
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Message, Person } from '@/lib/types'
+import { usePushSubscription } from '@/lib/usePushSubscription'
 
 export default function GroupChatPage() {
   const router = useRouter()
@@ -13,6 +14,8 @@ export default function GroupChatPage() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  usePushSubscription(me?.id ?? null)
 
   useEffect(() => {
     const supabase = getSupabase()

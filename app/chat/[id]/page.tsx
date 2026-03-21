@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Message, Person } from '@/lib/types'
+import { usePushSubscription } from '@/lib/usePushSubscription'
 
 export default function DirectChatPage() {
   const router = useRouter()
@@ -15,6 +16,8 @@ export default function DirectChatPage() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  usePushSubscription(me?.id ?? null)
 
   useEffect(() => {
     const supabase = getSupabase()
