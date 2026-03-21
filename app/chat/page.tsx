@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Person, Conversation } from '@/lib/types'
 
+function Star({ style }: { style: React.CSSProperties }) {
+  return (
+    <div className="absolute text-white/30 select-none pointer-events-none animate-pulse" style={style}>
+      ★
+    </div>
+  )
+}
+
 export default function ChatPage() {
   const router = useRouter()
   const [me, setMe] = useState<Person | null>(null)
@@ -23,12 +31,10 @@ export default function ChatPage() {
       if (!person) { router.replace('/login'); return }
       setMe(person as Person)
 
-      // Cargar todas las personas para mostrar nombres
       const { data: allPeople } = await supabase.from('people').select('*')
       const peopleList = (allPeople as Person[]) || []
       setPeople(peopleList)
 
-      // Cargar conversaciones 1 a 1 donde participo
       const { data: memberships } = await supabase
         .from('conversation_members')
         .select('conversation_id')
@@ -43,7 +49,6 @@ export default function ChatPage() {
           .in('id', convIds)
           .eq('is_group', false)
 
-        // Para cada conversación 1 a 1, encontrar el otro participante
         const { data: allMembers } = await supabase
           .from('conversation_members')
           .select('conversation_id, person_id')
@@ -71,14 +76,12 @@ export default function ChatPage() {
     if (!me) return
     const supabase = getSupabase()
 
-    // Verificar si ya existe una conversación 1 a 1 con esta persona
     const existing = conversations.find(c => c.other?.id === other.id)
     if (existing) {
       router.push(`/chat/${existing.id}`)
       return
     }
 
-    // Crear nueva conversación
     const { data: conv } = await supabase
       .from('conversations')
       .insert({ is_group: false })
@@ -103,73 +106,118 @@ export default function ChatPage() {
 
   const otherPeople = people.filter(p => p.id !== me?.id)
 
+  // Colores por persona (cicla entre los disponibles)
+  const cardColors = [
+    'from-blue-400 to-blue-600',
+    'from-red-400 to-red-600',
+    'from-yellow-400 to-orange-500',
+    'from-pink-400 to-pink-600',
+    'from-purple-400 to-purple-600',
+  ]
+
   return (
-    <div className="h-full flex flex-col bg-gray-100">
+    <div className="h-full flex flex-col overflow-hidden" style={{ background: 'linear-gradient(160deg, #1ad9a0 0%, #0fb87a 60%, #0a9e68 100%)' }}>
+
+      {/* Estrellas decorativas */}
+      <Star style={{ top: '8%', left: '6%', fontSize: '2rem', animationDelay: '0s' }} />
+      <Star style={{ top: '5%', right: '10%', fontSize: '1.4rem', animationDelay: '0.5s' }} />
+      <Star style={{ top: '18%', right: '5%', fontSize: '1rem', animationDelay: '1s' }} />
+      <Star style={{ top: '14%', left: '20%', fontSize: '0.8rem', animationDelay: '1.5s' }} />
+      <Star style={{ top: '22%', right: '25%', fontSize: '1.2rem', animationDelay: '0.3s' }} />
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 px-4 py-3 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">💬</span>
-          <div>
-            <h1 className="text-white font-bold text-lg leading-none">NanoChat</h1>
-            <p className="text-white/70 text-xs">Familia</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-5 pt-6 pb-2">
+        <p className="text-white/80 font-bold text-sm uppercase tracking-widest">NANOCHAT</p>
+        <div className="flex items-center gap-2">
           {me?.is_admin && (
-            <button onClick={() => router.push('/admin')} className="text-white/80 hover:text-white text-sm px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 transition">
-              👥 Admin
+            <button
+              onClick={() => router.push('/admin')}
+              className="text-white/80 text-xs px-3 py-1.5 rounded-full bg-white/20 font-bold uppercase tracking-wide"
+            >
+              ADMIN
             </button>
           )}
-          <button onClick={logout} className="text-white/80 hover:text-white text-sm">Salir</button>
+          <button
+            onClick={logout}
+            className="text-white/80 text-xs px-3 py-1.5 rounded-full bg-white/20 font-bold uppercase tracking-wide"
+          >
+            SALIR
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        {/* Chat grupal */}
-        <div className="px-4 pt-4 pb-2">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Grupo</p>
-          <button
-            onClick={() => router.push('/chat/group')}
-            className="w-full bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm hover:shadow-md transition"
-          >
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center text-xl">
-              👨‍👩‍👦
-            </div>
-            <div className="text-left">
-              <p className="font-semibold text-gray-800">Familia</p>
-              <p className="text-xs text-gray-400">Chat grupal</p>
-            </div>
-          </button>
+      {/* Personaje 3D */}
+      <div className="flex flex-col items-center pt-2 pb-4 relative">
+        <div className="text-[110px] leading-none drop-shadow-2xl select-none" style={{ filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.25))' }}>
+          👨‍👩‍👦
         </div>
+        <h1 className="text-white font-black text-3xl uppercase tracking-tight mt-1" style={{ textShadow: '0 3px 8px rgba(0,0,0,0.25)' }}>
+          HOLA, {me?.name?.toUpperCase() || '...'}!
+        </h1>
+        <p className="text-white/80 font-bold text-sm uppercase tracking-widest mt-1">
+          ¿CON QUIÉN HABLAMOS?
+        </p>
+      </div>
 
-        {/* Chats 1 a 1 */}
-        <div className="px-4 pt-2 pb-4">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Mensajes directos</p>
-          <div className="space-y-2">
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <div className="w-6 h-6 border-2 border-violet-600 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : otherPeople.map(person => {
-              const existing = conversations.find(c => c.other?.id === person.id)
-              return (
-                <button
-                  key={person.id}
-                  onClick={() => startConversation(person)}
-                  className="w-full bg-white rounded-2xl px-4 py-3 flex items-center gap-3 shadow-sm hover:shadow-md transition"
-                >
-                  <div className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold">
-                    {person.name[0].toUpperCase()}
-                  </div>
-                  <div className="text-left">
-                    <p className="font-semibold text-gray-800">{person.name}</p>
-                    <p className="text-xs text-gray-400">{existing ? 'Conversación activa' : 'Iniciar chat'}</p>
-                  </div>
-                </button>
-              )
-            })}
+      {/* Cards */}
+      <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
+
+        {/* Card grupal */}
+        <button
+          onClick={() => router.push('/chat/group')}
+          className="w-full rounded-3xl overflow-hidden shadow-xl active:scale-95 transition-transform"
+          style={{ background: 'linear-gradient(135deg, #6c63ff 0%, #4f46e5 100%)' }}
+        >
+          <div className="flex items-center gap-4 px-5 py-4">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-3xl shadow-inner">
+              🏠
+            </div>
+            <div className="flex-1 text-left">
+              <p className="text-white font-black text-lg uppercase tracking-tight">FAMILIA</p>
+              <p className="text-white/70 font-bold text-xs uppercase tracking-wide">CHAT GRUPAL</p>
+            </div>
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
+              <span className="text-white font-black text-lg">›</span>
+            </div>
           </div>
-        </div>
+        </button>
+
+        {/* Separador */}
+        <p className="text-white/60 font-black text-xs uppercase tracking-widest px-1 pt-1">
+          MENSAJES DIRECTOS
+        </p>
+
+        {/* Cards 1 a 1 */}
+        {loading ? (
+          <div className="flex justify-center py-6">
+            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : otherPeople.map((person, i) => {
+          const gradient = cardColors[i % cardColors.length]
+          const existing = conversations.find(c => c.other?.id === person.id)
+          return (
+            <button
+              key={person.id}
+              onClick={() => startConversation(person)}
+              className={`w-full rounded-3xl overflow-hidden shadow-xl active:scale-95 transition-transform bg-gradient-to-r ${gradient}`}
+            >
+              <div className="flex items-center gap-4 px-5 py-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-2xl shadow-inner">
+                  {person.name[0].toUpperCase()}
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-white font-black text-lg uppercase tracking-tight">{person.name.toUpperCase()}</p>
+                  <p className="text-white/70 font-bold text-xs uppercase tracking-wide">
+                    {existing ? 'CONVERSACIÓN ACTIVA' : 'INICIAR CHAT'}
+                  </p>
+                </div>
+                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
+                  <span className="text-white font-black text-lg">›</span>
+                </div>
+              </div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
