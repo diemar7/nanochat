@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Message, Person } from '@/lib/types'
-import { notifyAll } from '@/lib/notify'
 
 export default function GroupChatPage() {
   const router = useRouter()
@@ -64,11 +63,6 @@ export default function GroupChatPage() {
     const supabase = getSupabase()
     await supabase.from('messages').insert({ user_id: me.id, content: input.trim(), conversation_id: null })
 
-    // Notificar a todos menos a mí
-    const channels = allPeople
-      .filter(p => p.id !== me.id && p.ntfy_channel)
-      .map(p => p.ntfy_channel!)
-    if (channels.length > 0) notifyAll(channels, me.name, input.trim())
 
     setInput('')
     setSending(false)

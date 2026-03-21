@@ -1,7 +1,4 @@
-export async function notifyAll(channels: string[], senderName: string, content: string) {
-  fetch('https://yjpbnwiibmtcjjqbehrl.supabase.co/functions/v1/notify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ channels, senderName, content }),
-  }).catch(() => {})
+// Notificaciones push — pendiente implementar con Web Push
+export async function notifyAll(_channels: string[], _senderName: string, _content: string) {
+  // TODO: implementar Web Push
 }
