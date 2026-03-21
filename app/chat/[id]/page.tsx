@@ -15,19 +15,18 @@ export default function DirectChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [headerHeight, setHeaderHeight] = useState(80)
+  const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const wrapperRef = useRef<HTMLDivElement>(null)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLDivElement>(null)
 
   usePushSubscription(me?.id ?? null)
 
   useEffect(() => {
-    function setHeight() {
-      if (wrapperRef.current) wrapperRef.current.style.height = `${window.innerHeight}px`
-    }
-    setHeight()
-    window.addEventListener('resize', setHeight)
-    return () => window.removeEventListener('resize', setHeight)
-  }, [])
+    if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight)
+    if (inputRef.current) setInputHeight(inputRef.current.offsetHeight)
+  }, [other])
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -104,10 +103,10 @@ export default function DirectChatPage() {
   }
 
   return (
-    <div ref={wrapperRef} className="flex flex-col" style={{ height: '100dvh', backgroundColor: '#f0faf4' }}>
+    <div style={{ backgroundColor: '#f0faf4' }}>
 
-      {/* Header */}
-      <div className="flex-shrink-0 relative sticky top-0 z-10" style={{ backgroundColor: '#1a7a4a' }}>
+      {/* Header — fixed arriba */}
+      <div ref={headerRef} className="fixed top-0 left-0 right-0 z-20" style={{ backgroundColor: '#1a7a4a' }}>
         <div className="flex items-center gap-3 px-4 pt-4 pb-5">
           <button onClick={() => router.push('/chat')} className="text-xl w-8 flex-shrink-0 font-bold" style={{ color: '#a3e635' }}>←</button>
           <div className="relative flex-shrink-0">
@@ -129,8 +128,33 @@ export default function DirectChatPage() {
         </div>
       </div>
 
-      {/* Mensajes */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      {/* Input — fixed abajo */}
+      <div ref={inputRef} className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-100">
+        <form onSubmit={sendMessage} className="px-4 py-3 flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            placeholder={`Escribile a ${other?.name || ''}...`}
+            autoComplete="off"
+            className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 text-sm bg-gray-50"
+          />
+          <button
+            type="submit"
+            disabled={!input.trim() || sending}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition active:scale-95"
+            style={{ backgroundColor: '#1a7a4a' }}
+          >
+            ➤
+          </button>
+        </form>
+      </div>
+
+      {/* Mensajes — scroll en el medio */}
+      <div
+        className="overflow-y-auto px-4 space-y-2"
+        style={{ paddingTop: `calc(${headerHeight}px + 0.75rem)`, paddingBottom: `calc(${inputHeight}px + 0.75rem)`, minHeight: '100dvh' }}
+      >
         {messages.map(msg => {
           const isMe = msg.user_id === me?.id
           return (
@@ -149,26 +173,6 @@ export default function DirectChatPage() {
         })}
         <div ref={bottomRef} />
       </div>
-
-      {/* Input */}
-      <form onSubmit={sendMessage} className="px-4 py-3 bg-white border-t border-gray-100 flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder={`Escribile a ${other?.name || ''}...`}
-          autoComplete="off"
-          className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 text-sm bg-gray-50"
-        />
-        <button
-          type="submit"
-          disabled={!input.trim() || sending}
-          className="w-10 h-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition active:scale-95"
-          style={{ backgroundColor: '#1a7a4a' }}
-        >
-          ➤
-        </button>
-      </form>
     </div>
   )
 }
