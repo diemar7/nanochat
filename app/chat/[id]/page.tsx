@@ -16,6 +16,7 @@ export default function DirectChatPage() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const [otherTyping, setOtherTyping] = useState(false)
+  const [otherLastRead, setOtherLastRead] = useState<string | null>(null)
   const [headerHeight, setHeaderHeight] = useState(80)
   const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -54,6 +55,15 @@ export default function DirectChatPage() {
       if (otherId) {
         const { data: otherPerson } = await supabase.from('people').select('*').eq('id', otherId).single()
         if (otherPerson) setOther(otherPerson as Person)
+
+        // Cargar last_read_at del otro
+        const { data: receipt } = await supabase
+          .from('read_receipts')
+          .select('last_read_at')
+          .eq('person_id', otherId)
+          .eq('conversation_id', convId)
+          .single()
+        if (receipt) setOtherLastRead(receipt.last_read_at)
       }
 
       const { data: msgs } = await supabase
@@ -83,6 +93,13 @@ export default function DirectChatPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` }, async (payload) => {
         const { data } = await supabase2.from('messages').select('*, people(id, name)').eq('id', payload.new.id).single()
         if (data) setMessages(prev => [...prev, data as Message])
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'read_receipts', filter: `conversation_id=eq.${convId}` }, (payload) => {
+        const row = payload.new as { person_id: string; last_read_at: string } | undefined
+        if (row && row.person_id !== undefined) {
+          // Se actualiza cuando el otro abre el chat — no sabemos el otherId acá, lo actualizamos siempre
+          setOtherLastRead(row.last_read_at)
+        }
       })
       .subscribe()
 
@@ -204,6 +221,7 @@ export default function DirectChatPage() {
       >
         {messages.map(msg => {
           const isMe = msg.user_id === me?.id
+          const isRead = isMe && otherLastRead && msg.created_at && otherLastRead >= msg.created_at
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
@@ -213,7 +231,14 @@ export default function DirectChatPage() {
                 >
                   {msg.content}
                 </div>
-                <span className="text-xs text-gray-400 px-1">{formatTime(msg.created_at)}</span>
+                <div className="flex items-center gap-1 px-1">
+                  <span className="text-xs text-gray-400">{formatTime(msg.created_at)}</span>
+                  {isMe && (
+                    <span className="text-xs leading-none" style={{ color: isRead ? '#a3e635' : 'rgba(0,0,0,0.25)' }}>
+                      {isRead ? '✓✓' : '✓'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           )
