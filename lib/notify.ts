@@ -1,7 +1,17 @@
 export async function notifyAll(channels: string[], senderName: string, content: string) {
-  fetch('/api/notify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ channels, senderName, content }),
-  }).catch(() => {})
+  const preview = content.length > 60 ? content.slice(0, 60) + '...' : content
+
+  Promise.allSettled(
+    channels.map(channel =>
+      fetch(`https://ntfy.sh/${channel}`, {
+        method: 'POST',
+        headers: {
+          'Title': `NanoChat — ${senderName}`,
+          'Priority': 'default',
+          'Tags': 'speech_balloon',
+        },
+        body: preview,
+      })
+    )
+  ).catch(() => {})
 }
