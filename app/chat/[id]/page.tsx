@@ -263,7 +263,7 @@ export default function DirectChatPage() {
                 <div className="flex items-center gap-1 px-1">
                   <span className="text-xs text-gray-400">{formatTime(msg.created_at)}</span>
                   {isMe && (
-                    <span className="text-xs leading-none" style={{ color: isRead ? '#1a7a4a' : 'rgba(0,0,0,0.25)' }}>✓</span>
+                    <span className="text-sm font-bold leading-none" style={{ color: isRead ? '#1a7a4a' : 'rgba(0,0,0,0.25)' }}>✓</span>
                   )}
                 </div>
               </div>
