@@ -72,7 +72,7 @@ export default function GroupChatPage() {
       .channel('group-messages')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'conversation_id=is.null' }, async (payload) => {
         const { data } = await supabase2.from('messages').select('*, people(id, name)').eq('id', payload.new.id).single()
-        if (data) setMessages(prev => [...prev, data as Message])
+        if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
       })
       .subscribe()
 
@@ -121,9 +121,15 @@ export default function GroupChatPage() {
     e.preventDefault()
     if (!input.trim() || !me || sending) return
     setSending(true)
-    const supabase = getSupabase()
-    await supabase.from('messages').insert({ user_id: me.id, content: input.trim(), conversation_id: null })
+    const content = input.trim()
     setInput('')
+    const supabase = getSupabase()
+    const { data } = await supabase
+      .from('messages')
+      .insert({ user_id: me.id, content, conversation_id: null })
+      .select('*, people(id, name)')
+      .single()
+    if (data) setMessages(prev => [...prev, data as Message])
     setSending(false)
   }
 

@@ -92,7 +92,7 @@ export default function DirectChatPage() {
       .channel(`conv-${convId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` }, async (payload) => {
         const { data } = await supabase2.from('messages').select('*, people(id, name)').eq('id', payload.new.id).single()
-        if (data) setMessages(prev => [...prev, data as Message])
+        if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'read_receipts', filter: `conversation_id=eq.${convId}` }, (payload) => {
         const row = payload.new as { person_id: string; last_read_at: string } | undefined
@@ -149,9 +149,15 @@ export default function DirectChatPage() {
     e.preventDefault()
     if (!input.trim() || !me || sending) return
     setSending(true)
-    const supabase = getSupabase()
-    await supabase.from('messages').insert({ user_id: me.id, content: input.trim(), conversation_id: convId })
+    const content = input.trim()
     setInput('')
+    const supabase = getSupabase()
+    const { data } = await supabase
+      .from('messages')
+      .insert({ user_id: me.id, content, conversation_id: convId })
+      .select('*, people(id, name)')
+      .single()
+    if (data) setMessages(prev => [...prev, data as Message])
     setSending(false)
   }
 
