@@ -126,32 +126,32 @@ export default function ChatPage() {
         {/* Acciones */}
         <div className="flex gap-2">
           <button
-            className="flex-1 py-2 rounded-2xl text-sm font-semibold transition active:scale-95 text-center"
-            style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
+            className="flex-1 py-2.5 rounded-2xl text-xs font-bold tracking-widest uppercase transition active:scale-95 border border-emerald-500/30 backdrop-blur-sm"
+            style={{ backgroundColor: 'rgba(74,222,128,0.08)', color: '#4ade80', letterSpacing: '0.12em' }}
           >
-            Perfil
+            ◈ Perfil
           </button>
           {me?.is_admin && (
             <button
               onClick={() => router.push('/admin')}
-              className="flex-1 py-2 rounded-2xl text-sm font-semibold transition active:scale-95"
-              style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
+              className="flex-1 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest transition active:scale-95 border border-emerald-500/30 backdrop-blur-sm"
+              style={{ backgroundColor: 'rgba(74,222,128,0.08)', color: '#4ade80', letterSpacing: '0.12em' }}
             >
-              Admin
+              ⬡ Admin
             </button>
           )}
           <button
             onClick={logout}
-            className="flex-1 py-2 rounded-2xl text-sm font-semibold transition active:scale-95"
-            style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
+            className="flex-1 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-widest transition active:scale-95 border border-emerald-500/20 backdrop-blur-sm"
+            style={{ backgroundColor: 'rgba(74,222,128,0.04)', color: '#4ade80aa', letterSpacing: '0.12em' }}
           >
-            Salir
+            ⏻ Salir
           </button>
         </div>
       </header>
 
       {/* Sección inferior clara */}
-      <div className="bg-gray-50 rounded-t-3xl flex-1 overflow-y-auto px-4 pt-6 pb-10">
+      <div className="rounded-t-3xl flex-1 overflow-y-auto px-4 pt-6 pb-10" style={{ backgroundColor: '#edf7f0' }}>
 
         {/* Grupos */}
         <h2 className="font-bold text-gray-800 text-lg mb-3">Grupos</h2>
