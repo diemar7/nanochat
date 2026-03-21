@@ -14,8 +14,18 @@ export default function GroupChatPage() {
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   usePushSubscription(me?.id ?? null)
+
+  useEffect(() => {
+    function setHeight() {
+      if (wrapperRef.current) wrapperRef.current.style.height = `${window.innerHeight}px`
+    }
+    setHeight()
+    window.addEventListener('resize', setHeight)
+    return () => window.removeEventListener('resize', setHeight)
+  }, [])
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -86,7 +96,7 @@ export default function GroupChatPage() {
   const COLORS = ['bg-emerald-400', 'bg-teal-400', 'bg-cyan-400', 'bg-lime-500', 'bg-green-400']
 
   return (
-    <div className="flex flex-col" style={{ height: '100dvh', backgroundColor: '#f0faf4' }}>
+    <div ref={wrapperRef} className="flex flex-col" style={{ height: '100dvh', backgroundColor: '#f0faf4' }}>
 
       {/* Header */}
       <div className="flex-shrink-0 relative sticky top-0 z-10" style={{ backgroundColor: '#1a7a4a' }}>
