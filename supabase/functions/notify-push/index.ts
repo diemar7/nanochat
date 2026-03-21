@@ -1,14 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-// @deno-types="https://esm.sh/web-push@3/index.d.ts"
-import webpush from 'https://esm.sh/web-push@3'
+import webpush from 'npm:web-push@3'
 
 const VAPID_PUBLIC_KEY = 'BCooHVGXBmeEk_L9tzrstSmoevS-1ZDHUhUYsE2a0K2FbYsBI-c8EK08raTjfD0jvmZe4YRqWQdg-pOzUFOfDsY'
-const VAPID_PRIVATE_KEY = Deno.env.get('VAPID_PRIVATE_KEY')!
 
 webpush.setVapidDetails(
   'mailto:diemar7@gmail.com',
   VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY
+  Deno.env.get('VAPID_PRIVATE_KEY')!
 )
 
 Deno.serve(async (req) => {
