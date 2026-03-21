@@ -13,6 +13,14 @@ const AVATAR_COLORS = [
   'bg-green-400',
 ]
 
+function formatTime(ts: string) {
+  const d = new Date(ts)
+  const now = new Date()
+  const isToday = d.toDateString() === now.toDateString()
+  if (isToday) return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })
+}
+
 function greeting(name: string) {
   const h = new Date().getHours()
   if (h < 12) return `¡Buenos días, ${name}! ☀️`
@@ -27,6 +35,8 @@ export default function ChatPage() {
   const [people, setPeople] = useState<Person[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadConvIds, setUnreadConvIds] = useState<Set<string | null>>(new Set())
+  const [lastMessages, setLastMessages] = useState<Record<string, { content: string; created_at: string; user_id: string }>>({})
+  const [lastGroupMessage, setLastGroupMessage] = useState<{ content: string; created_at: string; user_id: string } | null>(null)
   const meIdRef = useRef<string | null>(null)
   const convIdsRef = useRef<string[]>([])
 
@@ -81,7 +91,39 @@ export default function ChatPage() {
       // Calcular no leídos
       await loadUnread(session.user.id, convIds)
 
+      // Cargar últimos mensajes
+      await loadLastMessages(convIds)
+
       setLoading(false)
+    }
+
+    async function loadLastMessages(convIds: string[]) {
+      const supabase = getSupabase()
+
+      // Último mensaje del grupo
+      const { data: groupMsg } = await supabase
+        .from('messages')
+        .select('content, created_at, user_id')
+        .is('conversation_id', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+      if (groupMsg) setLastGroupMessage(groupMsg)
+
+      // Últimos mensajes de cada conv 1 a 1
+      if (convIds.length === 0) return
+      const map: Record<string, { content: string; created_at: string; user_id: string }> = {}
+      await Promise.all(convIds.map(async (convId) => {
+        const { data } = await supabase
+          .from('messages')
+          .select('content, created_at, user_id')
+          .eq('conversation_id', convId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+        if (data) map[convId] = data
+      }))
+      setLastMessages(map)
     }
 
     async function loadUnread(userId: string, convIds: string[]) {
@@ -139,9 +181,15 @@ export default function ChatPage() {
         const userId = meIdRef.current
         const convIds = convIdsRef.current
         if (!userId) return
-        const msg = payload.new as { user_id: string; conversation_id: string | null }
+        const msg = payload.new as { user_id: string; conversation_id: string | null; content: string; created_at: string }
+        // Actualizar último mensaje
+        if (msg.conversation_id === null) {
+          setLastGroupMessage({ content: msg.content, created_at: msg.created_at, user_id: msg.user_id })
+        } else if (convIds.includes(msg.conversation_id)) {
+          setLastMessages(prev => ({ ...prev, [msg.conversation_id!]: { content: msg.content, created_at: msg.created_at, user_id: msg.user_id } }))
+        }
+        // Actualizar no leídos (solo mensajes de otros)
         if (msg.user_id === userId) return
-        // Solo actualizar si es un mensaje del grupo o de una conv del usuario
         if (msg.conversation_id === null || convIds.includes(msg.conversation_id)) {
           loadUnread(userId, convIds)
         }
@@ -250,9 +298,14 @@ export default function ChatPage() {
           <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-xl flex-shrink-0">
             🏠
           </div>
-          <div className="flex-1 text-left">
-            <p className="font-semibold text-gray-800">Familia</p>
-            <p className="text-xs text-gray-400 mt-0.5">Chat grupal</p>
+          <div className="flex-1 text-left min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-semibold text-gray-800">Familia</p>
+              {lastGroupMessage && <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(lastGroupMessage.created_at)}</span>}
+            </div>
+            <p className="text-xs text-gray-400 mt-0.5 truncate">
+              {lastGroupMessage ? lastGroupMessage.content : 'Chat grupal'}
+            </p>
           </div>
           {unreadConvIds.has(null) && (
             <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: '#1a7a4a' }} />
@@ -281,10 +334,15 @@ export default function ChatPage() {
                   <div className={`w-11 h-11 rounded-full ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
                     {person.name[0].toUpperCase()}
                   </div>
-                  <div className="flex-1 text-left">
-                    <p className={`font-semibold text-gray-800 ${hasUnread ? 'font-black' : ''}`}>{person.name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {existing ? 'Conversación activa' : 'Iniciar chat'}
+                  <div className="flex-1 text-left min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`font-semibold text-gray-800 ${hasUnread ? 'font-black' : ''} truncate`}>{person.name}</p>
+                      {existing && lastMessages[existing.id] && (
+                        <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(lastMessages[existing.id].created_at)}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">
+                      {existing && lastMessages[existing.id] ? lastMessages[existing.id].content : (existing ? 'Conversación activa' : 'Iniciar chat')}
                     </p>
                   </div>
                   {hasUnread && (
