@@ -13,7 +13,8 @@ const AVATAR_COLORS = [
   'bg-green-400',
 ]
 
-function formatTime(ts: string) {
+function formatTime(ts: string | null) {
+  if (!ts) return ''
   const d = new Date(ts)
   const now = new Date()
   const isToday = d.toDateString() === now.toDateString()
@@ -35,8 +36,8 @@ export default function ChatPage() {
   const [people, setPeople] = useState<Person[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadConvIds, setUnreadConvIds] = useState<Set<string | null>>(new Set())
-  const [lastMessages, setLastMessages] = useState<Record<string, { content: string; created_at: string; user_id: string }>>({})
-  const [lastGroupMessage, setLastGroupMessage] = useState<{ content: string; created_at: string; user_id: string } | null>(null)
+  const [lastMessages, setLastMessages] = useState<Record<string, { content: string; created_at: string | null; user_id: string }>>({})
+  const [lastGroupMessage, setLastGroupMessage] = useState<{ content: string; created_at: string | null; user_id: string } | null>(null)
   const meIdRef = useRef<string | null>(null)
   const convIdsRef = useRef<string[]>([])
 
@@ -112,7 +113,7 @@ export default function ChatPage() {
 
       // Últimos mensajes de cada conv 1 a 1
       if (convIds.length === 0) return
-      const map: Record<string, { content: string; created_at: string; user_id: string }> = {}
+      const map: Record<string, { content: string; created_at: string | null; user_id: string }> = {}
       await Promise.all(convIds.map(async (convId) => {
         const { data } = await supabase
           .from('messages')
