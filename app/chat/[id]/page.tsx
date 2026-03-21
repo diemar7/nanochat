@@ -15,9 +15,7 @@ export default function DirectChatPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [headerHeight, setHeaderHeight] = useState(0)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
 
   usePushSubscription(me?.id ?? null)
 
@@ -77,10 +75,6 @@ export default function DirectChatPage() {
   }, [router, convId])
 
   useEffect(() => {
-    if (headerRef.current) setHeaderHeight(headerRef.current.offsetHeight)
-  }, [other])
-
-  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
@@ -102,8 +96,8 @@ export default function DirectChatPage() {
   return (
     <div className="flex flex-col" style={{ height: '100dvh', backgroundColor: '#f0faf4' }}>
 
-      {/* Header — fixed para que el teclado no lo empuje */}
-      <div ref={headerRef} className="fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: '#1a7a4a' }}>
+      {/* Header */}
+      <div className="flex-shrink-0 relative" style={{ backgroundColor: '#1a7a4a' }}>
         <div className="flex items-center gap-3 px-4 pt-4 pb-5">
           <button onClick={() => router.push('/chat')} className="text-xl w-8 flex-shrink-0 font-bold" style={{ color: '#a3e635' }}>←</button>
           <div className="relative flex-shrink-0">
@@ -126,7 +120,7 @@ export default function DirectChatPage() {
       </div>
 
       {/* Mensajes */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2" style={{ paddingTop: `calc(${headerHeight}px + 0.75rem)` }}>
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {messages.map(msg => {
           const isMe = msg.user_id === me?.id
           return (
