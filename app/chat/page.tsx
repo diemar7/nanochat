@@ -193,7 +193,7 @@ export default function ChatPage() {
                   key={person.id}
                   onClick={() => startConversation(person)}
                   className="w-full rounded-2xl px-4 py-4 flex items-center gap-4 active:scale-95 transition-transform"
-                  style={{ backgroundColor: '#0f3d24' }}
+                  style={{ backgroundColor: '#f0fdf4' }}
                 >
                   {/* Avatar */}
                   <div className={`w-12 h-12 rounded-2xl ${color.bg} border-2 ${color.border} flex items-center justify-center text-white font-black text-xl shadow-lg flex-shrink-0`}>
@@ -202,15 +202,15 @@ export default function ChatPage() {
 
                   {/* Info */}
                   <div className="flex-1 text-left">
-                    <p className="text-white font-bold text-base">{person.name}</p>
-                    <p className="text-emerald-400/70 text-xs font-medium mt-0.5">
+                    <p className="text-gray-800 font-bold text-base">{person.name}</p>
+                    <p className="text-emerald-600 text-xs font-medium mt-0.5">
                       {existing ? 'Conversación activa' : 'Iniciar chat'}
                     </p>
                   </div>
 
                   {/* Flecha */}
-                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#1a5c36' }}>
-                    <span className="text-emerald-300 font-black text-sm">›</span>
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#bbf7d0' }}>
+                    <span className="text-emerald-700 font-black text-sm">›</span>
                   </div>
                 </button>
               )
