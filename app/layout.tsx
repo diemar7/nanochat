@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "NanoChat",
   description: "El chat de la familia",
   manifest: "/manifest.json",
+  themeColor: "#1a7a4a",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

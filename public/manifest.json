@@ -4,8 +4,8 @@
   "description": "El chat de la familia",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#7c3aed",
-  "theme_color": "#7c3aed",
+  "background_color": "#1a7a4a",
+  "theme_color": "#1a7a4a",
   "icons": [
     {
       "src": "/icon-192.png",
