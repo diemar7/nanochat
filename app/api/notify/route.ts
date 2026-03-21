@@ -5,7 +5,7 @@ export async function POST(req: NextRequest) {
 
   const preview = content.length > 60 ? content.slice(0, 60) + '...' : content
 
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     channels.map((channel: string) =>
       fetch(`https://ntfy.sh/${channel}`, {
         method: 'POST',
@@ -15,9 +15,10 @@ export async function POST(req: NextRequest) {
           'Tags': 'speech_balloon',
         },
         body: preview,
-      })
+      }).then(r => ({ channel, status: r.status }))
     )
   )
 
-  return NextResponse.json({ ok: true })
+  console.log('notify results:', JSON.stringify(results))
+  return NextResponse.json({ ok: true, results })
 }
