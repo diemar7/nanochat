@@ -39,6 +39,12 @@ export default function GroupChatPage() {
         .limit(100)
 
       setMessages((msgs as Message[]) || [])
+
+      // Marcar grupal como leído
+      await supabase.from('read_receipts').upsert(
+        { person_id: session.user.id, conversation_id: null, last_read_at: new Date().toISOString() },
+        { onConflict: 'person_id,conversation_id', ignoreDuplicates: false }
+      )
     }
 
     init()

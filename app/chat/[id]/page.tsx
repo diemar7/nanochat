@@ -49,6 +49,12 @@ export default function DirectChatPage() {
         .limit(100)
 
       setMessages((msgs as Message[]) || [])
+
+      // Marcar conversación como leída
+      await supabase.from('read_receipts').upsert(
+        { person_id: session.user.id, conversation_id: convId, last_read_at: new Date().toISOString() },
+        { onConflict: 'person_id,conversation_id' }
+      )
     }
 
     init()
