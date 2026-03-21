@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Person, Conversation } from '@/lib/types'
@@ -27,6 +27,8 @@ export default function ChatPage() {
   const [people, setPeople] = useState<Person[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadConvIds, setUnreadConvIds] = useState<Set<string | null>>(new Set())
+  const meIdRef = useRef<string | null>(null)
+  const convIdsRef = useRef<string[]>([])
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -38,6 +40,7 @@ export default function ChatPage() {
       const { data: person } = await supabase.from('people').select('*').eq('id', session.user.id).single()
       if (!person) { router.replace('/login'); return }
       setMe(person as Person)
+      meIdRef.current = session.user.id
 
       const { data: allPeople } = await supabase.from('people').select('*')
       const peopleList = (allPeople as Person[]) || []
@@ -49,6 +52,7 @@ export default function ChatPage() {
         .eq('person_id', session.user.id)
 
       const convIds = (memberships || []).map((m: { conversation_id: string }) => m.conversation_id)
+      convIdsRef.current = convIds
 
       if (convIds.length > 0) {
         const { data: convs } = await supabase
@@ -127,6 +131,24 @@ export default function ChatPage() {
     }
 
     init()
+
+    const supabase2 = getSupabase()
+    const channel = supabase2
+      .channel('chat-list-messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const userId = meIdRef.current
+        const convIds = convIdsRef.current
+        if (!userId) return
+        const msg = payload.new as { user_id: string; conversation_id: string | null }
+        if (msg.user_id === userId) return
+        // Solo actualizar si es un mensaje del grupo o de una conv del usuario
+        if (msg.conversation_id === null || convIds.includes(msg.conversation_id)) {
+          loadUnread(userId, convIds)
+        }
+      })
+      .subscribe()
+
+    return () => { supabase2.removeChannel(channel) }
   }, [router])
 
   async function startConversation(other: Person) {
