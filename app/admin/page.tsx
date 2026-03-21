@@ -22,12 +22,7 @@ export default function AdminPage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.replace('/login'); return }
 
-      const { data: person } = await supabase
-        .from('people')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-
+      const { data: person } = await supabase.from('people').select('*').eq('id', session.user.id).single()
       if (!person?.is_admin) { router.replace('/chat'); return }
       setMe(person as Person)
 
@@ -42,12 +37,8 @@ export default function AdminPage() {
     e.preventDefault()
     setLoading(true)
     setMessage('')
-
     const supabase = getSupabase()
-    const { data, error } = await supabase.auth.signUp({
-      email: newEmail,
-      password: newPassword,
-    })
+    const { data, error } = await supabase.auth.signUp({ email: newEmail, password: newPassword })
 
     if (error || !data.user) {
       setMessage('Error al crear el usuario: ' + (error?.message || 'desconocido'))
@@ -66,9 +57,7 @@ export default function AdminPage() {
       setMessage('Usuario creado pero error al guardar perfil: ' + insertError.message)
     } else {
       setMessage(`✅ ${newName} agregado correctamente`)
-      setNewEmail('')
-      setNewName('')
-      setNewPassword('')
+      setNewEmail(''); setNewName(''); setNewPassword('')
       const { data: updated } = await supabase.from('people').select('*').order('created_at')
       setPeople((updated as Person[]) || [])
     }
@@ -88,20 +77,25 @@ export default function AdminPage() {
     setPeople(prev => prev.map(p => p.id === person.id ? { ...p, is_admin: !p.is_admin } : p))
   }
 
+  const COLORS = ['bg-emerald-400', 'bg-teal-400', 'bg-cyan-400', 'bg-lime-500', 'bg-green-400']
+
   return (
-    <div className="h-full flex flex-col bg-gray-100">
+    <div className="h-full flex flex-col" style={{ backgroundColor: '#f0faf4' }}>
+
       {/* Header */}
-      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 px-4 py-3 flex items-center gap-3 shadow-lg">
-        <button onClick={() => router.push('/chat')} className="text-white/80 hover:text-white text-xl">
-          ←
-        </button>
-        <h1 className="text-white font-bold text-lg">Gestión de usuarios</h1>
+      <div className="flex items-center gap-3 px-4 py-3 shadow-sm" style={{ backgroundColor: '#1a7a4a' }}>
+        <button onClick={() => router.push('/chat')} className="text-white/80 hover:text-white text-xl w-8">←</button>
+        <div className="flex-1">
+          <p className="text-white font-bold">Gestión de usuarios</p>
+          <p className="text-white/60 text-xs">{people.length} miembros</p>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+
         {/* Agregar usuario */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <h2 className="font-semibold text-gray-700 mb-3">Agregar miembro</h2>
+          <h2 className="font-bold text-gray-700 mb-3">Agregar miembro</h2>
           <form onSubmit={addUser} className="space-y-3">
             <input
               type="text"
@@ -109,7 +103,7 @@ export default function AdminPage() {
               value={newName}
               onChange={e => setNewName(e.target.value)}
               required
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 bg-gray-50"
             />
             <input
               type="email"
@@ -117,7 +111,7 @@ export default function AdminPage() {
               value={newEmail}
               onChange={e => setNewEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 bg-gray-50"
             />
             <input
               type="password"
@@ -126,56 +120,55 @@ export default function AdminPage() {
               onChange={e => setNewPassword(e.target.value)}
               required
               minLength={6}
-              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 bg-gray-50"
             />
-            {message && (
-              <p className="text-sm text-center text-gray-600">{message}</p>
-            )}
+            {message && <p className="text-sm text-center text-gray-600">{message}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold text-sm disabled:opacity-60 hover:opacity-90 transition"
+              className="w-full py-3 rounded-xl font-bold text-sm text-white disabled:opacity-60 transition active:scale-95"
+              style={{ backgroundColor: '#1a7a4a' }}
             >
-              {loading ? 'Agregando...' : 'Agregar'}
+              {loading ? 'Agregando...' : 'Agregar miembro →'}
             </button>
           </form>
         </div>
 
-        {/* Lista de miembros */}
+        {/* Lista */}
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <h2 className="font-semibold text-gray-700 px-4 pt-4 pb-2">Miembros ({people.length})</h2>
-          {people.map(person => (
+          <h2 className="font-bold text-gray-700 px-4 pt-4 pb-2">Miembros ({people.length})</h2>
+          {people.map((person, i) => (
             <div key={person.id} className="flex items-center gap-3 px-4 py-3 border-t border-gray-100">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold text-sm">
+              <div className={`w-10 h-10 rounded-full ${COLORS[i % COLORS.length]} flex items-center justify-center text-white font-bold flex-shrink-0`}>
                 {person.name[0].toUpperCase()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-800 text-sm truncate">{person.name}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-gray-800 text-sm truncate">{person.name}</p>
+                  {person.is_admin && (
+                    <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: '#dcfce7', color: '#15803d' }}>admin</span>
+                  )}
+                </div>
                 <p className="text-xs text-gray-400 truncate">{person.email}</p>
               </div>
-              <div className="flex items-center gap-2">
-                {person.is_admin && (
-                  <span className="text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">admin</span>
-                )}
-                {person.id !== me?.id && (
-                  <>
-                    <button
-                      onClick={() => toggleAdmin(person)}
-                      className="text-xs text-gray-400 hover:text-violet-600 transition"
-                      title={person.is_admin ? 'Quitar admin' : 'Hacer admin'}
-                    >
-                      {person.is_admin ? '⬇' : '⬆'}
-                    </button>
-                    <button
-                      onClick={() => removeUser(person)}
-                      className="text-xs text-gray-400 hover:text-red-500 transition"
-                      title="Eliminar"
-                    >
-                      🗑
-                    </button>
-                  </>
-                )}
-              </div>
+              {person.id !== me?.id && (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleAdmin(person)}
+                    className="text-gray-400 hover:text-emerald-600 transition text-sm"
+                    title={person.is_admin ? 'Quitar admin' : 'Hacer admin'}
+                  >
+                    {person.is_admin ? '↓' : '↑'}
+                  </button>
+                  <button
+                    onClick={() => removeUser(person)}
+                    className="text-gray-300 hover:text-red-500 transition text-base"
+                    title="Eliminar"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>

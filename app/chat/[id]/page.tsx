@@ -30,7 +30,6 @@ export default function DirectChatPage() {
       if (!person) { router.replace('/login'); return }
       setMe(person as Person)
 
-      // Obtener el otro participante
       const { data: members } = await supabase
         .from('conversation_members')
         .select('person_id')
@@ -42,7 +41,6 @@ export default function DirectChatPage() {
         if (otherPerson) setOther(otherPerson as Person)
       }
 
-      // Cargar mensajes
       const { data: msgs } = await supabase
         .from('messages')
         .select('*, people(id, name)')
@@ -77,8 +75,6 @@ export default function DirectChatPage() {
     setSending(true)
     const supabase = getSupabase()
     await supabase.from('messages').insert({ user_id: me.id, content: input.trim(), conversation_id: convId })
-
-
     setInput('')
     setSending(false)
   }
@@ -89,25 +85,31 @@ export default function DirectChatPage() {
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-100">
-      <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-700 px-4 py-3 flex items-center gap-3 shadow-lg">
-        <button onClick={() => router.push('/chat')} className="text-white/80 hover:text-white text-xl">←</button>
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-400 to-purple-500 flex items-center justify-center text-white font-bold">
+    <div className="h-full flex flex-col" style={{ backgroundColor: '#f0faf4' }}>
+
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 shadow-sm" style={{ backgroundColor: '#1a7a4a' }}>
+        <button onClick={() => router.push('/chat')} className="text-white/80 hover:text-white text-xl w-8">←</button>
+        <div className="w-9 h-9 rounded-full bg-emerald-400 flex items-center justify-center text-white font-bold text-base">
           {other?.name[0].toUpperCase() || '?'}
         </div>
-        <div>
+        <div className="flex-1">
           <p className="text-white font-bold leading-none">{other?.name || '...'}</p>
-          <p className="text-white/70 text-xs">Mensaje directo</p>
+          <p className="text-white/60 text-xs">Mensaje directo</p>
         </div>
       </div>
 
+      {/* Mensajes */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {messages.map(msg => {
           const isMe = msg.user_id === me?.id
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
-                <div className={`px-4 py-2 rounded-2xl text-sm shadow-sm ${isMe ? 'bg-gradient-to-br from-violet-600 to-purple-600 text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm'}`}>
+                <div
+                  className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm ${isMe ? 'text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm'}`}
+                  style={isMe ? { backgroundColor: '#1a7a4a' } : {}}
+                >
                   {msg.content}
                 </div>
                 <span className="text-xs text-gray-400 px-1">{formatTime(msg.created_at)}</span>
@@ -118,18 +120,20 @@ export default function DirectChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="px-4 py-3 bg-white border-t border-gray-200 flex gap-2">
+      {/* Input */}
+      <form onSubmit={sendMessage} className="px-4 py-3 bg-white border-t border-gray-100 flex gap-2">
         <input
           type="text"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder={`Escribile a ${other?.name || ''}...`}
-          className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 text-sm"
+          className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 text-sm bg-gray-50"
         />
         <button
           type="submit"
           disabled={!input.trim() || sending}
-          className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-purple-600 text-white disabled:opacity-50 transition"
+          className="w-10 h-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition active:scale-95"
+          style={{ backgroundColor: '#1a7a4a' }}
         >
           ➤
         </button>

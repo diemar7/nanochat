@@ -15,10 +15,8 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
-
     const supabase = getSupabase()
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-
     if (error) {
       setError('Email o contraseña incorrectos')
       setLoading(false)
@@ -28,46 +26,56 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="h-full flex items-center justify-center bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-4">
-      <div className="w-full max-w-sm bg-white/20 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/30">
-        <div className="text-center mb-8">
-          <div className="text-5xl mb-3">💬</div>
-          <h1 className="text-3xl font-bold text-white">NanoChat</h1>
-          <p className="text-white/70 mt-1 text-sm">El chat de la familia</p>
+    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: '#1a7a4a' }}>
+
+      {/* Círculos decorativos */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }} />
+        <div className="absolute top-32 -left-12 w-48 h-48 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }} />
+      </div>
+
+      {/* Top — logo y personaje */}
+      <div className="relative z-10 flex flex-col items-center justify-center flex-1 px-6 pt-16 pb-8">
+        <div className="relative mb-2">
+          <div className="absolute inset-0 rounded-full blur-xl" style={{ backgroundColor: 'rgba(163,230,53,0.35)', transform: 'scale(1.2)' }} />
+          <div className="relative w-28 h-28 select-none pointer-events-none">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/nano-character.png" alt="NanoChat" className="w-full h-full object-contain" style={{ filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.4))' }} />
+          </div>
         </div>
+        <h1 className="text-white font-black text-4xl tracking-tight mt-2">NanoChat</h1>
+        <p className="text-white/50 text-sm mt-1">El chat de la familia</p>
+      </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
-            />
-          </div>
-          <div>
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
-            />
-          </div>
-
-          {error && (
-            <p className="text-red-200 text-sm text-center">{error}</p>
-          )}
-
+      {/* Bottom — form */}
+      <div className="relative z-10 rounded-t-3xl px-6 pt-8 pb-10 space-y-4" style={{ backgroundColor: '#f0faf4' }}>
+        <h2 className="text-gray-800 font-bold text-xl mb-2">Entrar</h2>
+        <form onSubmit={handleLogin} className="space-y-3">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 text-sm"
+            style={{ '--tw-ring-color': '#1a7a4a' } as React.CSSProperties}
+          />
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 text-sm"
+          />
+          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-white text-violet-700 font-bold text-lg hover:bg-white/90 transition disabled:opacity-60"
+            className="w-full py-3.5 rounded-2xl font-bold text-base transition active:scale-95 disabled:opacity-60"
+            style={{ backgroundColor: '#1a7a4a', color: '#fff' }}
           >
-            {loading ? 'Entrando...' : 'Entrar'}
+            {loading ? 'Entrando...' : 'Entrar →'}
           </button>
         </form>
       </div>
