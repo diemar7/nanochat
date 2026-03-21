@@ -127,8 +127,8 @@ export default function GroupChatPage() {
         </div>
       </div>
 
-      {/* Input — fixed abajo */}
-      <div ref={inputRef} className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t border-gray-100">
+      {/* Input — fixed abajo, sube con el teclado via VirtualKeyboard API */}
+      <div ref={inputRef} className="fixed left-0 right-0 z-20 bg-white border-t border-gray-100" style={{ bottom: 'env(keyboard-inset-height, 0px)' }}>
         <form onSubmit={sendMessage} className="px-4 py-3 flex gap-2">
           <input
             type="text"
