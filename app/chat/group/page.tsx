@@ -97,7 +97,7 @@ export default function GroupChatPage() {
       {/* Header — fixed para que el teclado no lo empuje */}
       <div ref={headerRef} className="fixed top-0 left-0 right-0 z-50" style={{ backgroundColor: '#1a7a4a' }}>
         <div className="flex items-center gap-3 px-4 pt-4 pb-5">
-          <button onClick={() => router.push('/chat')} className="text-white/80 hover:text-white text-xl w-8 flex-shrink-0">←</button>
+          <button onClick={() => router.push('/chat')} className="text-xl w-8 flex-shrink-0 font-bold" style={{ color: '#a3e635' }}>←</button>
           <div className="relative flex-shrink-0">
             <div className="absolute inset-0 rounded-full blur-sm" style={{ backgroundColor: 'rgba(163,230,53,0.35)', transform: 'scale(1.2)' }} />
             <div className="relative w-11 h-11 rounded-full border-2 flex items-center justify-center text-lg"
