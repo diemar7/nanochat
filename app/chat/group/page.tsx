@@ -86,7 +86,7 @@ export default function GroupChatPage() {
   const COLORS = ['bg-emerald-400', 'bg-teal-400', 'bg-cyan-400', 'bg-lime-500', 'bg-green-400']
 
   return (
-    <div className="flex flex-col" style={{ height: '100dvh', backgroundColor: '#f0faf4' }}>
+    <div className="flex flex-col" style={{ height: '100svh', backgroundColor: '#f0faf4' }}>
 
       {/* Header */}
       <div className="flex-shrink-0 relative" style={{ backgroundColor: '#1a7a4a' }}>

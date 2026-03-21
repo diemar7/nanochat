@@ -1,13 +1,5 @@
 @import "tailwindcss";
 
-html {
+html, body {
   height: 100%;
-}
-
-body {
-  height: 100%;
-  /* Previene que iOS haga scroll cuando aparece el teclado virtual */
-  position: fixed;
-  width: 100%;
-  overflow: hidden;
 }
