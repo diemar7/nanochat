@@ -28,10 +28,34 @@ Deno.serve(async (req) => {
 
     if (!sender) return new Response('ok')
 
+    // Determinar a quiénes notificar
+    let recipientIds: string[]
+
+    if (record.conversation_id) {
+      // Chat 1 a 1: solo los miembros de esa conversación excepto el sender
+      const { data: members } = await supabase
+        .from('conversation_members')
+        .select('person_id')
+        .eq('conversation_id', record.conversation_id)
+        .neq('person_id', record.user_id)
+
+      recipientIds = (members || []).map((m: { person_id: string }) => m.person_id)
+    } else {
+      // Chat grupal: todos excepto el sender
+      const { data: people } = await supabase
+        .from('people')
+        .select('id')
+        .neq('id', record.user_id)
+
+      recipientIds = (people || []).map((p: { id: string }) => p.id)
+    }
+
+    if (recipientIds.length === 0) return new Response('ok')
+
     const { data: subs } = await supabase
       .from('push_subscriptions')
       .select('subscription')
-      .neq('person_id', record.user_id)
+      .in('person_id', recipientIds)
 
     if (!subs || subs.length === 0) return new Response('ok')
 
