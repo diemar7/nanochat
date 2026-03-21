@@ -117,7 +117,7 @@ export default function ChatPage() {
       </div>
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between px-5 pt-8 pb-2">
+      <div className="relative z-20 flex items-center justify-between px-5 pt-8 pb-2">
         <div>
           <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Bienvenido</p>
           <h1 className="text-white font-black text-2xl leading-tight">{me?.name || '...'} 👋</h1>
