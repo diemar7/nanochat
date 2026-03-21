@@ -94,14 +94,19 @@ export default function ChatPage() {
         (receipts || []).map((r: { conversation_id: string | null; last_read_at: string }) => [r.conversation_id, r.last_read_at])
       )
 
+      console.log('[unread] receipts:', receipts)
+      console.log('[unread] receiptMap:', [...receiptMap.entries()])
+
       // Chequear grupal (conversation_id = null)
       const groupLastRead = receiptMap.get(null) ?? null
-      const { count: groupCount } = await supabase
+      const { count: groupCount, error: groupErr } = await supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
         .is('conversation_id', null)
         .neq('user_id', userId)
         .gt('created_at', groupLastRead ?? '1970-01-01')
+
+      console.log('[unread] groupCount:', groupCount, 'groupErr:', groupErr, 'groupLastRead:', groupLastRead)
 
       if ((groupCount ?? 0) > 0) unread.add(null)
 
