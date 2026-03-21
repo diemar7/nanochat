@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Person, Conversation } from '@/lib/types'
 
-function Star({ style }: { style: React.CSSProperties }) {
-  return (
-    <div className="absolute text-white/30 select-none pointer-events-none animate-pulse" style={style}>
-      ★
-    </div>
-  )
-}
+const AVATAR_COLORS = [
+  { bg: 'bg-emerald-400', border: 'border-emerald-300' },
+  { bg: 'bg-teal-400', border: 'border-teal-300' },
+  { bg: 'bg-cyan-400', border: 'border-cyan-300' },
+  { bg: 'bg-lime-400', border: 'border-lime-300' },
+  { bg: 'bg-green-400', border: 'border-green-300' },
+]
 
 export default function ChatPage() {
   const router = useRouter()
@@ -106,118 +106,111 @@ export default function ChatPage() {
 
   const otherPeople = people.filter(p => p.id !== me?.id)
 
-  // Colores por persona (cicla entre los disponibles)
-  const cardColors = [
-    'from-blue-400 to-blue-600',
-    'from-red-400 to-red-600',
-    'from-yellow-400 to-orange-500',
-    'from-pink-400 to-pink-600',
-    'from-purple-400 to-purple-600',
-  ]
-
   return (
-    <div className="h-full flex flex-col overflow-hidden" style={{ background: 'linear-gradient(160deg, #1ad9a0 0%, #0fb87a 60%, #0a9e68 100%)' }}>
+    <div className="h-full flex flex-col overflow-hidden" style={{ backgroundColor: '#0a2a1a' }}>
 
-      {/* Estrellas decorativas */}
-      <Star style={{ top: '8%', left: '6%', fontSize: '2rem', animationDelay: '0s' }} />
-      <Star style={{ top: '5%', right: '10%', fontSize: '1.4rem', animationDelay: '0.5s' }} />
-      <Star style={{ top: '18%', right: '5%', fontSize: '1rem', animationDelay: '1s' }} />
-      <Star style={{ top: '14%', left: '20%', fontSize: '0.8rem', animationDelay: '1.5s' }} />
-      <Star style={{ top: '22%', right: '25%', fontSize: '1.2rem', animationDelay: '0.3s' }} />
+      {/* Círculos decorativos de fondo */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full opacity-10" style={{ backgroundColor: '#4ade80' }} />
+        <div className="absolute top-40 -left-16 w-48 h-48 rounded-full opacity-10" style={{ backgroundColor: '#86efac' }} />
+        <div className="absolute bottom-20 right-10 w-32 h-32 rounded-full opacity-10" style={{ backgroundColor: '#4ade80' }} />
+      </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-6 pb-2">
-        <p className="text-white/80 font-bold text-sm uppercase tracking-widest">NANOCHAT</p>
+      <div className="relative z-10 flex items-center justify-between px-5 pt-8 pb-2">
+        <div>
+          <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest">Bienvenido</p>
+          <h1 className="text-white font-black text-2xl leading-tight">{me?.name || '...'} 👋</h1>
+        </div>
         <div className="flex items-center gap-2">
           {me?.is_admin && (
             <button
               onClick={() => router.push('/admin')}
-              className="text-white/80 text-xs px-3 py-1.5 rounded-full bg-white/20 font-bold uppercase tracking-wide"
+              className="text-xs px-3 py-1.5 rounded-full font-bold"
+              style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
             >
-              ADMIN
+              Admin
             </button>
           )}
           <button
             onClick={logout}
-            className="text-white/80 text-xs px-3 py-1.5 rounded-full bg-white/20 font-bold uppercase tracking-wide"
+            className="text-xs px-3 py-1.5 rounded-full font-bold"
+            style={{ backgroundColor: '#1a4a2e', color: '#4ade80' }}
           >
-            SALIR
+            Salir
           </button>
         </div>
       </div>
 
-      {/* Personaje 3D */}
-      <div className="flex flex-col items-center pt-2 pb-4 relative">
-        <div className="text-[110px] leading-none drop-shadow-2xl select-none" style={{ filter: 'drop-shadow(0 12px 24px rgba(0,0,0,0.25))' }}>
-          👨‍👩‍👦
+      {/* Hero card con personaje */}
+      <div className="relative z-10 mx-4 mt-4 mb-2">
+        <div className="rounded-3xl overflow-visible relative" style={{ backgroundColor: '#0f3d24', minHeight: '180px' }}>
+          {/* Contenido de la card */}
+          <div className="px-6 pt-6 pb-5">
+            <p className="text-emerald-300 font-bold text-xs uppercase tracking-widest mb-1">NanoChat</p>
+            <h2 className="text-white font-black text-2xl leading-tight mb-4">
+              ¿Con quién<br/>hablamos hoy?
+            </h2>
+            <button
+              onClick={() => router.push('/chat/group')}
+              className="font-black text-sm px-5 py-2.5 rounded-2xl transition active:scale-95"
+              style={{ backgroundColor: '#a3e635', color: '#0a2a1a' }}
+            >
+              Chat Familiar →
+            </button>
+          </div>
+
+          {/* Personaje desbordando la card */}
+          <div className="absolute -top-8 right-4 text-8xl leading-none select-none" style={{ filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))' }}>
+            🧒
+          </div>
         </div>
-        <h1 className="text-white font-black text-3xl uppercase tracking-tight mt-1" style={{ textShadow: '0 3px 8px rgba(0,0,0,0.25)' }}>
-          HOLA, {me?.name?.toUpperCase() || '...'}!
-        </h1>
-        <p className="text-white/80 font-bold text-sm uppercase tracking-widest mt-1">
-          ¿CON QUIÉN HABLAMOS?
-        </p>
       </div>
 
-      {/* Cards */}
-      <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-3">
-
-        {/* Card grupal */}
-        <button
-          onClick={() => router.push('/chat/group')}
-          className="w-full rounded-3xl overflow-hidden shadow-xl active:scale-95 transition-transform"
-          style={{ background: 'linear-gradient(135deg, #6c63ff 0%, #4f46e5 100%)' }}
-        >
-          <div className="flex items-center gap-4 px-5 py-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-3xl shadow-inner">
-              🏠
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-white font-black text-lg uppercase tracking-tight">FAMILIA</p>
-              <p className="text-white/70 font-bold text-xs uppercase tracking-wide">CHAT GRUPAL</p>
-            </div>
-            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
-              <span className="text-white font-black text-lg">›</span>
-            </div>
-          </div>
-        </button>
-
-        {/* Separador */}
-        <p className="text-white/60 font-black text-xs uppercase tracking-widest px-1 pt-1">
-          MENSAJES DIRECTOS
+      {/* Lista de contactos */}
+      <div className="relative z-10 flex-1 overflow-y-auto px-4 pt-2 pb-6">
+        <p className="text-emerald-400 font-bold text-xs uppercase tracking-widest mb-3 px-1">
+          Mensajes directos
         </p>
 
-        {/* Cards 1 a 1 */}
         {loading ? (
-          <div className="flex justify-center py-6">
-            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+          <div className="flex justify-center py-8">
+            <div className="w-8 h-8 border-4 border-emerald-400 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : otherPeople.map((person, i) => {
-          const gradient = cardColors[i % cardColors.length]
-          const existing = conversations.find(c => c.other?.id === person.id)
-          return (
-            <button
-              key={person.id}
-              onClick={() => startConversation(person)}
-              className={`w-full rounded-3xl overflow-hidden shadow-xl active:scale-95 transition-transform bg-gradient-to-r ${gradient}`}
-            >
-              <div className="flex items-center gap-4 px-5 py-4">
-                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-2xl shadow-inner">
-                  {person.name[0].toUpperCase()}
-                </div>
-                <div className="flex-1 text-left">
-                  <p className="text-white font-black text-lg uppercase tracking-tight">{person.name.toUpperCase()}</p>
-                  <p className="text-white/70 font-bold text-xs uppercase tracking-wide">
-                    {existing ? 'CONVERSACIÓN ACTIVA' : 'INICIAR CHAT'}
-                  </p>
-                </div>
-                <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
-                  <span className="text-white font-black text-lg">›</span>
-                </div>
-              </div>
-            </button>
-          )
-        })}
+        ) : (
+          <div className="space-y-3">
+            {otherPeople.map((person, i) => {
+              const color = AVATAR_COLORS[i % AVATAR_COLORS.length]
+              const existing = conversations.find(c => c.other?.id === person.id)
+              return (
+                <button
+                  key={person.id}
+                  onClick={() => startConversation(person)}
+                  className="w-full rounded-2xl px-4 py-4 flex items-center gap-4 active:scale-95 transition-transform"
+                  style={{ backgroundColor: '#0f3d24' }}
+                >
+                  {/* Avatar */}
+                  <div className={`w-12 h-12 rounded-2xl ${color.bg} border-2 ${color.border} flex items-center justify-center text-white font-black text-xl shadow-lg flex-shrink-0`}>
+                    {person.name[0].toUpperCase()}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 text-left">
+                    <p className="text-white font-bold text-base">{person.name}</p>
+                    <p className="text-emerald-400/70 text-xs font-medium mt-0.5">
+                      {existing ? 'Conversación activa' : 'Iniciar chat'}
+                    </p>
+                  </div>
+
+                  {/* Flecha */}
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#1a5c36' }}>
+                    <span className="text-emerald-300 font-black text-sm">›</span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
