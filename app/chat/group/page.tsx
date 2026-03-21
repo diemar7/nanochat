@@ -16,6 +16,8 @@ export default function GroupChatPage() {
   const [headerHeight, setHeaderHeight] = useState(80)
   const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
+  const isAtBottomRef = useRef(true)
   const headerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLDivElement>(null)
 
@@ -74,7 +76,9 @@ export default function GroupChatPage() {
   }, [router])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isAtBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   async function sendMessage(e: React.FormEvent) {
@@ -152,8 +156,14 @@ export default function GroupChatPage() {
 
       {/* Mensajes — scroll en el medio */}
       <div
+        ref={messagesRef}
         className="overflow-y-auto px-4 space-y-2"
         style={{ paddingTop: `calc(${headerHeight}px + 0.75rem)`, paddingBottom: `calc(${inputHeight}px + 0.75rem)`, minHeight: '100dvh' }}
+        onScroll={() => {
+          const el = messagesRef.current
+          if (!el) return
+          isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+        }}
       >
         {messages.map(msg => {
           const isMe = msg.user_id === me?.id
