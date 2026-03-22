@@ -33,6 +33,14 @@ export default function GroupChatPage() {
   }, [allPeople])
 
   useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', url: '/chat/group' })
+      })
+    }
+  }, [])
+
+  useEffect(() => {
     const supabase = getSupabase()
 
     async function init() {

@@ -18,6 +18,19 @@ self.addEventListener('push', (event) => {
   )
 })
 
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'CLEAR_NOTIFICATIONS') {
+    const url = event.data.url
+    event.waitUntil(
+      self.registration.getNotifications().then((notifications) => {
+        notifications.forEach((n) => {
+          if (n.data?.url === url) n.close()
+        })
+      })
+    )
+  }
+})
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
   const url = event.notification.data?.url || '/'

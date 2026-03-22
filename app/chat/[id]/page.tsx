@@ -36,6 +36,14 @@ export default function DirectChatPage() {
   }, [other])
 
   useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', url: `/chat/${convId}` })
+      })
+    }
+  }, [convId])
+
+  useEffect(() => {
     const supabase = getSupabase()
 
     async function init() {
