@@ -8,14 +8,21 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { title: 'NanoChat', body: event.data.text() }
   }
+  const tag = data.tag || 'default'
   event.waitUntil(
-    self.registration.showNotification(data.title || 'NanoChat', {
-      body: data.body || '',
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      tag: data.tag || 'default',
-      renotify: true,
-      data: { url: data.url || '/' },
+    self.registration.getNotifications({ tag }).then((existing) => {
+      // Acumular mensajes anteriores en el body
+      const prevBody = existing.length > 0 ? existing[0].body : null
+      existing.forEach(n => n.close())
+      const body = prevBody ? `${prevBody}\n${data.body || ''}` : (data.body || '')
+      return self.registration.showNotification(data.title || 'NanoChat', {
+        body,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        tag,
+        renotify: true,
+        data: { url: data.url || '/' },
+      })
     })
   )
 })
