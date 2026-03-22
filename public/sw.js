@@ -1,4 +1,4 @@
-const SW_VERSION = 2
+const SW_VERSION = 3
 
 self.addEventListener('push', (event) => {
   if (!event.data) return
