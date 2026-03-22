@@ -64,11 +64,13 @@ Deno.serve(async (req) => {
       : record.content
 
     const url = record.conversation_id ? `/chat/${record.conversation_id}` : '/chat/group'
+    const tag = record.conversation_id ?? 'group'
 
     const notification = JSON.stringify({
       title: `NanoChat — ${sender.name}`,
       body: preview,
       url,
+      tag,
     })
 
     await Promise.allSettled(

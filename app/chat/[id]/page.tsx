@@ -38,7 +38,7 @@ export default function DirectChatPage() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then((reg) => {
-        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', url: `/chat/${convId}` })
+        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', tag: convId })
       })
     }
   }, [convId])

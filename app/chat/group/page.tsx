@@ -35,7 +35,7 @@ export default function GroupChatPage() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then((reg) => {
-        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', url: '/chat/group' })
+        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', tag: 'group' })
       })
     }
   }, [])

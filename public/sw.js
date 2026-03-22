@@ -13,6 +13,8 @@ self.addEventListener('push', (event) => {
       body: data.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
+      tag: data.tag || 'default',
+      renotify: true,
       data: { url: data.url || '/' },
     })
   )
@@ -20,12 +22,10 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'CLEAR_NOTIFICATIONS') {
-    const url = event.data.url
+    const tag = event.data.tag
     event.waitUntil(
-      self.registration.getNotifications().then((notifications) => {
-        notifications.forEach((n) => {
-          if (n.data?.url === url) n.close()
-        })
+      self.registration.getNotifications({ tag }).then((notifications) => {
+        notifications.forEach((n) => n.close())
       })
     )
   }
