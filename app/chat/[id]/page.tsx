@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
-import type { Message, Person } from '@/lib/types'
+import type { Message, Person, MessageReaction } from '@/lib/types'
 import { usePushSubscription } from '@/lib/usePushSubscription'
 
 export default function DirectChatPage() {
@@ -17,6 +17,8 @@ export default function DirectChatPage() {
   const [sending, setSending] = useState(false)
   const [otherTyping, setOtherTyping] = useState(false)
   const [otherLastRead, setOtherLastRead] = useState<string | null>(null)
+  const [reactions, setReactions] = useState<Record<string, MessageReaction[]>>({})
+  const [pickerMsgId, setPickerMsgId] = useState<string | null>(null)
   const [headerHeight, setHeaderHeight] = useState(80)
   const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -80,7 +82,25 @@ export default function DirectChatPage() {
         .eq('conversation_id', convId)
         .order('created_at', { ascending: false })
         .limit(100)
-      setMessages(((msgs as Message[]) || []).reverse())
+      const msgList = ((msgs as Message[]) || []).reverse()
+      setMessages(msgList)
+
+      // Cargar reacciones de estos mensajes
+      if (msgList.length > 0) {
+        const ids = msgList.map(m => m.id)
+        const { data: rxns } = await supabase
+          .from('message_reactions')
+          .select('*')
+          .in('message_id', ids)
+        if (rxns) {
+          const map: Record<string, MessageReaction[]> = {}
+          for (const r of rxns as MessageReaction[]) {
+            if (!map[r.message_id]) map[r.message_id] = []
+            map[r.message_id].push(r)
+          }
+          setReactions(map)
+        }
+      }
 
       // Marcar conversación como leída
       const now = new Date().toISOString()
@@ -100,6 +120,21 @@ export default function DirectChatPage() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` }, async (payload) => {
         const { data } = await supabase2.from('messages').select('*, people(id, name)').eq('id', payload.new.id).single()
         if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_reactions' }, (payload) => {
+        const r = payload.new as MessageReaction
+        setReactions(prev => {
+          const existing = prev[r.message_id] || []
+          if (existing.some(x => x.id === r.id)) return prev
+          return { ...prev, [r.message_id]: [...existing, r] }
+        })
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'message_reactions' }, (payload) => {
+        const r = payload.old as MessageReaction
+        setReactions(prev => {
+          const existing = prev[r.message_id] || []
+          return { ...prev, [r.message_id]: existing.filter(x => x.id !== r.id) }
+        })
       })
       .subscribe()
 
@@ -191,6 +226,42 @@ export default function DirectChatPage() {
     setSending(false)
   }
 
+  const EMOJIS = ['❤️', '😂', '👍', '😮', '😢', '🔥']
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function onPressStart(msgId: string) {
+    longPressRef.current = setTimeout(() => {
+      setPickerMsgId(msgId)
+    }, 500)
+  }
+
+  function onPressEnd() {
+    if (longPressRef.current) clearTimeout(longPressRef.current)
+  }
+
+  async function toggleReaction(msgId: string, emoji: string) {
+    if (!me) return
+    setPickerMsgId(null)
+    const supabase = getSupabase()
+    const existing = (reactions[msgId] || []).find(r => r.person_id === me.id && r.emoji === emoji)
+    if (existing) {
+      await supabase.from('message_reactions').delete().eq('id', existing.id)
+    } else {
+      await supabase.from('message_reactions').insert({ message_id: msgId, person_id: me.id, emoji })
+    }
+  }
+
+  function groupReactions(msgId: string) {
+    const rxns = reactions[msgId] || []
+    const grouped: Record<string, { count: number; isMine: boolean }> = {}
+    for (const r of rxns) {
+      if (!grouped[r.emoji]) grouped[r.emoji] = { count: 0, isMine: false }
+      grouped[r.emoji].count++
+      if (r.person_id === me?.id) grouped[r.emoji].isMine = true
+    }
+    return grouped
+  }
+
   function formatTime(ts: string | null) {
     if (!ts) return ''
     return new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
@@ -255,18 +326,58 @@ export default function DirectChatPage() {
           isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
         }}
       >
+        {pickerMsgId && (
+          <div className="fixed inset-0 z-30" onClick={() => setPickerMsgId(null)}>
+            <div className="absolute inset-0 bg-black/20" />
+            <div
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl px-4 py-3 flex gap-3"
+              onClick={e => e.stopPropagation()}
+            >
+              {EMOJIS.map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => toggleReaction(pickerMsgId, emoji)}
+                  className="text-2xl active:scale-110 transition-transform"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {messages.map(msg => {
           const isMe = msg.user_id === me?.id
           const isRead = isMe && otherLastRead && msg.created_at && otherLastRead >= msg.created_at
+          const grouped = groupReactions(msg.id)
+          const hasReactions = Object.keys(grouped).length > 0
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
                 <div
-                  className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm ${isMe ? 'text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm'}`}
+                  className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm select-none ${isMe ? 'text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm'}`}
                   style={isMe ? { backgroundColor: '#1a7a4a' } : {}}
+                  onMouseDown={() => onPressStart(msg.id)}
+                  onMouseUp={onPressEnd}
+                  onMouseLeave={onPressEnd}
+                  onTouchStart={() => onPressStart(msg.id)}
+                  onTouchEnd={onPressEnd}
                 >
                   {msg.content}
                 </div>
+                {hasReactions && (
+                  <div className="flex flex-wrap gap-1 px-1">
+                    {Object.entries(grouped).map(([emoji, { count, isMine }]) => (
+                      <button
+                        key={emoji}
+                        onClick={() => toggleReaction(msg.id, emoji)}
+                        className={`flex items-center gap-0.5 text-xs px-2 py-0.5 rounded-full border transition ${isMine ? 'border-lime-400 bg-lime-50' : 'border-gray-200 bg-white'}`}
+                      >
+                        <span>{emoji}</span>
+                        {count > 1 && <span className="text-gray-500">{count}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <div className="flex items-center gap-1 px-1">
                   <span className="text-xs text-gray-400">{formatTime(msg.created_at)}</span>
                   {isMe && (
