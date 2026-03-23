@@ -204,9 +204,22 @@ export default function ChatPage() {
     if (!me) return
     const supabase = getSupabase()
 
-    const existing = conversations.find(c => c.other?.id === other.id)
-    if (existing) {
-      router.push(`/chat/${existing.id}`)
+    // Buscar en DB si ya existe una conversación entre los dos
+    const { data: myMemberships } = await supabase
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('person_id', me.id)
+
+    const { data: otherMemberships } = await supabase
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('person_id', other.id)
+
+    const myIds = new Set((myMemberships || []).map((m: { conversation_id: string }) => m.conversation_id))
+    const sharedId = (otherMemberships || []).find((m: { conversation_id: string }) => myIds.has(m.conversation_id))?.conversation_id
+
+    if (sharedId) {
+      router.push(`/chat/${sharedId}`)
       return
     }
 
