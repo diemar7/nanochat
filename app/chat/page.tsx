@@ -206,12 +206,14 @@ export default function ChatPage() {
 
     // Buscar en DB si ya existe una conv 1 a 1 entre los dos
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: found } = await (supabase as any).rpc('find_direct_conversation', {
+    const { data: found, error: rpcError } = await (supabase as any).rpc('find_direct_conversation', {
       user_a: me.id,
       user_b: other.id,
     })
+    console.log('[startConversation] found:', found, 'error:', rpcError, 'me:', me.id, 'other:', other.id)
 
     if (found) {
+      console.log('[startConversation] navigating to existing:', found)
       router.push(`/chat/${found}`)
       return
     }
