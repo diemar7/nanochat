@@ -59,7 +59,7 @@ export default function GroupChatPage() {
         .select('*, people(id, name)')
         .is('conversation_id', null)
         .order('created_at', { ascending: true })
-        .limit(100)
+        .limit(500)
 
       setMessages((msgs as Message[]) || [])
 

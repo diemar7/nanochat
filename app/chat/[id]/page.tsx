@@ -79,9 +79,7 @@ export default function DirectChatPage() {
         .select('*, people(id, name)')
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true })
-        .limit(100)
-
-      console.log('[chat init] convId:', convId, 'msgs:', msgs?.length, 'error:', msgsError)
+        .limit(500)
       setMessages((msgs as Message[]) || [])
 
       // Marcar conversación como leída
