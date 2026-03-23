@@ -78,9 +78,9 @@ export default function DirectChatPage() {
         .from('messages')
         .select('*, people(id, name)')
         .eq('conversation_id', convId)
-        .order('created_at', { ascending: true })
-        .limit(500)
-      setMessages((msgs as Message[]) || [])
+        .order('created_at', { ascending: false })
+        .limit(100)
+      setMessages(((msgs as Message[]) || []).reverse())
 
       // Marcar conversación como leída
       const now = new Date().toISOString()

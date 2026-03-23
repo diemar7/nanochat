@@ -58,10 +58,10 @@ export default function GroupChatPage() {
         .from('messages')
         .select('*, people(id, name)')
         .is('conversation_id', null)
-        .order('created_at', { ascending: true })
-        .limit(500)
+        .order('created_at', { ascending: false })
+        .limit(100)
 
-      setMessages((msgs as Message[]) || [])
+      setMessages(((msgs as Message[]) || []).reverse())
 
       // Marcar grupal como leído
       const now = new Date().toISOString()
