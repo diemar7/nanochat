@@ -205,7 +205,8 @@ export default function ChatPage() {
     const supabase = getSupabase()
 
     // Buscar en DB si ya existe una conv 1 a 1 entre los dos
-    const { data: found } = await supabase.rpc('find_direct_conversation', {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: found } = await (supabase as any).rpc('find_direct_conversation', {
       user_a: me.id,
       user_b: other.id,
     })
