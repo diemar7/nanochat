@@ -43,6 +43,7 @@ export default function ChatPage() {
   const [lastGroupMessage, setLastGroupMessage] = useState<{ content: string; audio_url?: string | null; created_at: string | null; user_id: string } | null>(null)
   const meIdRef = useRef<string | null>(null)
   const convIdsRef = useRef<string[]>([])
+  const inGroupRef = useRef(false)
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -68,6 +69,7 @@ export default function ChatPage() {
       const allConvIds = (memberships || []).map((m: { conversation_id: string }) => m.conversation_id)
       const isInGroup = allConvIds.includes(GROUP_CONV_ID)
       setInGroup(isInGroup)
+      inGroupRef.current = isInGroup
       const convIds = allConvIds.filter((id: string) => id !== GROUP_CONV_ID)
       convIdsRef.current = convIds
 
@@ -150,16 +152,18 @@ export default function ChatPage() {
           .map((r: any) => [r.conversation_id as string, r.last_read_at as string])
       )
 
-      // Chequear grupal
-      const groupLastRead = receiptMap.get(GROUP_CONV_ID) ?? null
-      const { count: groupCount } = await supabase
-        .from('messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('conversation_id', GROUP_CONV_ID)
-        .neq('user_id', userId)
-        .gt('created_at', groupLastRead ?? '1970-01-01')
+      // Chequear grupal (solo si el usuario es miembro)
+      if (inGroupRef.current) {
+        const groupLastRead = receiptMap.get(GROUP_CONV_ID) ?? null
+        const { count: groupCount } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .eq('conversation_id', GROUP_CONV_ID)
+          .neq('user_id', userId)
+          .gt('created_at', groupLastRead ?? '1970-01-01')
 
-      if ((groupCount ?? 0) > 0) unread.add(GROUP_CONV_ID)
+        if ((groupCount ?? 0) > 0) unread.add(GROUP_CONV_ID)
+      }
 
       // Chequear 1 a 1
       for (const convId of convIds) {
@@ -195,8 +199,10 @@ export default function ChatPage() {
         }
         // Actualizar no leídos (solo mensajes de otros)
         if (msg.user_id === userId) return
-        if (msg.conversation_id === GROUP_CONV_ID || (msg.conversation_id && convIds.includes(msg.conversation_id))) {
-          loadUnread(userId, convIds)
+        if (msg.conversation_id === GROUP_CONV_ID && inGroupRef.current) {
+          setUnreadConvIds(prev => new Set([...prev, GROUP_CONV_ID]))
+        } else if (msg.conversation_id && convIds.includes(msg.conversation_id)) {
+          setUnreadConvIds(prev => new Set([...prev, msg.conversation_id!]))
         }
       })
       .subscribe()
