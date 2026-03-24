@@ -377,8 +377,7 @@ export default function GroupChatPage() {
             <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
             <span className="text-sm text-gray-600 flex-1">Grabando... {formatSeconds(recordingSeconds)}</span>
             <button
-              onMouseUp={stopRecording}
-              onTouchEnd={stopRecording}
+              onClick={stopRecording}
               className="w-10 h-10 flex items-center justify-center rounded-full text-white"
               style={{ backgroundColor: '#dc2626' }}
             >
@@ -409,8 +408,7 @@ export default function GroupChatPage() {
               <button
                 type="button"
                 disabled={sending}
-                onMouseDown={startRecording}
-                onTouchStart={startRecording}
+                onClick={startRecording}
                 className="w-10 h-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition active:scale-95"
                 style={{ backgroundColor: '#1a7a4a' }}
               >
