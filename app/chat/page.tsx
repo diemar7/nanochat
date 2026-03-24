@@ -145,8 +145,9 @@ export default function ChatPage() {
 
       const receiptMap = new Map<string, string>(
         (receipts || [])
-          .filter((r: { conversation_id: string | null }) => r.conversation_id !== null)
-          .map((r: { conversation_id: string; last_read_at: string }) => [r.conversation_id, r.last_read_at])
+          .filter((r: { conversation_id: string | null; last_read_at: string }) => r.conversation_id !== null)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .map((r: any) => [r.conversation_id as string, r.last_read_at as string])
       )
 
       // Chequear grupal
@@ -189,12 +190,12 @@ export default function ChatPage() {
         // Actualizar último mensaje
         if (msg.conversation_id === GROUP_CONV_ID) {
           setLastGroupMessage({ content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id })
-        } else if (convIds.includes(msg.conversation_id)) {
+        } else if (msg.conversation_id && convIds.includes(msg.conversation_id)) {
           setLastMessages(prev => ({ ...prev, [msg.conversation_id!]: { content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id } }))
         }
         // Actualizar no leídos (solo mensajes de otros)
         if (msg.user_id === userId) return
-        if (msg.conversation_id === GROUP_CONV_ID || convIds.includes(msg.conversation_id)) {
+        if (msg.conversation_id === GROUP_CONV_ID || (msg.conversation_id && convIds.includes(msg.conversation_id))) {
           loadUnread(userId, convIds)
         }
       })
