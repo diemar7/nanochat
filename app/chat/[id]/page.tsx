@@ -19,6 +19,7 @@ export default function DirectChatPage() {
   const [otherLastRead, setOtherLastRead] = useState<string | null>(null)
   const [reactions, setReactions] = useState<Record<string, MessageReaction[]>>({})
   const [pickerMsgId, setPickerMsgId] = useState<string | null>(null)
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null)
   const [headerHeight, setHeaderHeight] = useState(80)
   const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -78,11 +79,11 @@ export default function DirectChatPage() {
 
       const { data: msgs, error: msgsError } = await supabase
         .from('messages')
-        .select('*, people(id, name)')
+        .select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))')
         .eq('conversation_id', convId)
         .order('created_at', { ascending: false })
         .limit(100)
-      const msgList = ((msgs as Message[]) || []).reverse()
+      const msgList = ((msgs as unknown as Message[]) || []).reverse()
       setMessages(msgList)
 
       // Cargar reacciones de estos mensajes
@@ -118,8 +119,8 @@ export default function DirectChatPage() {
     const channel = supabase2
       .channel(`conv-${convId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${convId}` }, async (payload) => {
-        const { data } = await supabase2.from('messages').select('*, people(id, name)').eq('id', payload.new.id).single()
-        if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as Message])
+        const { data } = await supabase2.from('messages').select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))').eq('id', payload.new.id).single()
+        if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as unknown as Message])
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'message_reactions' }, (payload) => {
         const r = payload.new as MessageReaction
@@ -215,14 +216,16 @@ export default function DirectChatPage() {
     if (!input.trim() || !me || sending) return
     setSending(true)
     const content = input.trim()
+    const replyId = replyingTo?.id ?? null
     setInput('')
+    setReplyingTo(null)
     const supabase = getSupabase()
     const { data } = await supabase
       .from('messages')
-      .insert({ user_id: me.id, content, conversation_id: convId })
-      .select('*, people(id, name)')
+      .insert({ user_id: me.id, content, conversation_id: convId, reply_to_id: replyId })
+      .select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))')
       .single()
-    if (data) setMessages(prev => [...prev, data as Message])
+    if (data) setMessages(prev => [...prev, data as unknown as Message])
     setSending(false)
   }
 
@@ -237,6 +240,12 @@ export default function DirectChatPage() {
 
   function onPressEnd() {
     if (longPressRef.current) clearTimeout(longPressRef.current)
+  }
+
+  function startReply(msgId: string) {
+    const msg = messages.find(m => m.id === msgId)
+    if (msg) setReplyingTo(msg)
+    setPickerMsgId(null)
   }
 
   async function toggleReaction(msgId: string, emoji: string) {
@@ -295,6 +304,17 @@ export default function DirectChatPage() {
 
       {/* Input — fixed abajo, sube con el teclado via VirtualKeyboard API */}
       <div ref={inputRef} className="fixed left-0 right-0 z-20 bg-white border-t border-gray-100" style={{ bottom: 'env(keyboard-inset-height, 0px)' }}>
+        {replyingTo && (
+          <div className="flex items-center gap-2 px-4 pt-2 pb-1">
+            <div className="flex-1 border-l-4 pl-2 py-0.5 text-xs text-gray-500 truncate" style={{ borderColor: '#a3e635' }}>
+              <span className="font-semibold" style={{ color: '#1a7a4a' }}>
+                {replyingTo.user_id === me?.id ? 'Vos' : replyingTo.people?.name}
+              </span>
+              <span className="ml-1 truncate">{replyingTo.content}</span>
+            </div>
+            <button onClick={() => setReplyingTo(null)} className="text-gray-400 text-lg leading-none">×</button>
+          </div>
+        )}
         <form onSubmit={sendMessage} className="px-4 py-3 flex gap-2">
           <input
             type="text"
@@ -330,18 +350,27 @@ export default function DirectChatPage() {
           <div className="fixed inset-0 z-30" onClick={() => setPickerMsgId(null)}>
             <div className="absolute inset-0 bg-black/20" />
             <div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl px-4 py-3 flex gap-3"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl px-4 py-3 flex flex-col gap-3"
               onClick={e => e.stopPropagation()}
             >
-              {EMOJIS.map(emoji => (
-                <button
-                  key={emoji}
-                  onClick={() => toggleReaction(pickerMsgId, emoji)}
-                  className="text-2xl active:scale-110 transition-transform"
-                >
-                  {emoji}
-                </button>
-              ))}
+              <div className="flex gap-3">
+                {EMOJIS.map(emoji => (
+                  <button
+                    key={emoji}
+                    onClick={() => toggleReaction(pickerMsgId, emoji)}
+                    className="text-2xl active:scale-110 transition-transform"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => startReply(pickerMsgId)}
+                className="text-sm font-semibold py-1.5 px-3 rounded-xl text-white"
+                style={{ backgroundColor: '#1a7a4a' }}
+              >
+                ↩ Responder
+              </button>
             </div>
           </div>
         )}
@@ -354,7 +383,7 @@ export default function DirectChatPage() {
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[75%] flex flex-col gap-0.5 ${isMe ? 'items-end' : 'items-start'}`}>
                 <div
-                  className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm select-none ${isMe ? 'text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm'}`}
+                  className={`rounded-2xl text-sm shadow-sm select-none overflow-hidden ${isMe ? 'text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm'}`}
                   style={isMe ? { backgroundColor: '#1a7a4a' } : {}}
                   onMouseDown={() => onPressStart(msg.id)}
                   onMouseUp={onPressEnd}
@@ -362,7 +391,15 @@ export default function DirectChatPage() {
                   onTouchStart={() => onPressStart(msg.id)}
                   onTouchEnd={onPressEnd}
                 >
-                  {msg.content}
+                  {msg.reply_to && (
+                    <div className={`px-3 pt-2 pb-1 border-l-4 mx-2 mt-2 rounded text-xs ${isMe ? 'border-lime-300 bg-white/10' : 'border-lime-500 bg-gray-50'}`}>
+                      <p className={`font-semibold ${isMe ? 'text-lime-200' : 'text-emerald-700'}`}>
+                        {msg.reply_to.people?.name ?? 'Alguien'}
+                      </p>
+                      <p className={`truncate ${isMe ? 'text-white/70' : 'text-gray-500'}`}>{msg.reply_to.content}</p>
+                    </div>
+                  )}
+                  <div className="px-4 py-2.5">{msg.content}</div>
                 </div>
                 {hasReactions && (
                   <div className="flex flex-wrap gap-1 px-1">
