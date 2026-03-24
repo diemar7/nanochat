@@ -17,6 +17,7 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [lastCreated, setLastCreated] = useState<{ name: string; email: string; password: string } | null>(null)
+  const [shareTarget, setShareTarget] = useState<{ person: Person; password: string } | null>(null)
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -213,7 +214,7 @@ Te invito a *NanoChat*, la app de la familia para chatear con Nano 💚
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <h2 className="font-bold text-gray-700 px-4 pt-4 pb-2">Miembros ({people.length})</h2>
           {people.map((person, i) => (
-            <div key={person.id} className="flex items-center gap-3 px-4 py-3 border-t border-gray-100">
+            <div key={person.id} className="flex flex-wrap items-center gap-3 px-4 py-3 border-t border-gray-100">
               <div className={`w-10 h-10 rounded-full ${COLORS[i % COLORS.length]} flex items-center justify-center text-white font-bold flex-shrink-0`}>
                 {person.name[0].toUpperCase()}
               </div>
@@ -229,6 +230,13 @@ Te invito a *NanoChat*, la app de la familia para chatear con Nano 💚
               {person.id !== me?.id && (
                 <div className="flex items-center gap-3">
                   <button
+                    onClick={() => setShareTarget(shareTarget?.person.id === person.id ? null : { person, password: '' })}
+                    className="text-gray-300 hover:text-green-500 transition text-base"
+                    title="Compartir acceso"
+                  >
+                    📲
+                  </button>
+                  <button
                     onClick={() => toggleAdmin(person)}
                     className="text-gray-400 hover:text-emerald-600 transition text-sm"
                     title={person.is_admin ? 'Quitar admin' : 'Hacer admin'}
@@ -241,6 +249,25 @@ Te invito a *NanoChat*, la app de la familia para chatear con Nano 💚
                     title="Eliminar"
                   >
                     ✕
+                  </button>
+                </div>
+              )}
+              {shareTarget?.person.id === person.id && (
+                <div className="w-full mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Contraseña"
+                    value={shareTarget.password}
+                    onChange={e => setShareTarget({ ...shareTarget, password: e.target.value })}
+                    className="flex-1 px-3 py-1.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none"
+                  />
+                  <button
+                    onClick={() => { shareOnWhatsApp({ name: person.name, email: person.email, password: shareTarget.password }); setShareTarget(null) }}
+                    disabled={!shareTarget.password}
+                    className="px-3 py-1.5 rounded-xl text-sm font-bold text-white disabled:opacity-40"
+                    style={{ backgroundColor: '#25d366' }}
+                  >
+                    Enviar
                   </button>
                 </div>
               )}
