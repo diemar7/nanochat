@@ -12,6 +12,7 @@ export default function AdminPage() {
   const [newEmail, setNewEmail] = useState('')
   const [newName, setNewName] = useState('')
   const [newPassword, setNewPassword] = useState('')
+  const [directsWith, setDirectsWith] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -55,12 +56,29 @@ export default function AdminPage() {
 
     if (insertError) {
       setMessage('Usuario creado pero error al guardar perfil: ' + insertError.message)
-    } else {
-      setMessage(`✅ ${newName} agregado correctamente`)
-      setNewEmail(''); setNewName(''); setNewPassword('')
-      const { data: updated } = await supabase.from('people').select('*').order('created_at')
-      setPeople((updated as Person[]) || [])
+      setLoading(false)
+      return
     }
+
+    // Crear chats directos seleccionados
+    for (const otherId of directsWith) {
+      const { data: conv } = await supabase
+        .from('conversations')
+        .insert({ is_group: false })
+        .select('id')
+        .single()
+      if (conv) {
+        await supabase.from('conversation_members').insert([
+          { conversation_id: conv.id, person_id: data.user.id },
+          { conversation_id: conv.id, person_id: otherId },
+        ])
+      }
+    }
+
+    setMessage(`✅ ${newName} agregado correctamente`)
+    setNewEmail(''); setNewName(''); setNewPassword(''); setDirectsWith([])
+    const { data: updated } = await supabase.from('people').select('*').order('created_at')
+    setPeople((updated as Person[]) || [])
     setLoading(false)
   }
 
@@ -122,6 +140,25 @@ export default function AdminPage() {
               minLength={6}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 bg-gray-50"
             />
+            {/* Chats directos */}
+            {people.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Crear chat directo con</p>
+                {people.map(p => (
+                  <label key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-100 bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={directsWith.includes(p.id)}
+                      onChange={e => setDirectsWith(prev =>
+                        e.target.checked ? [...prev, p.id] : prev.filter(id => id !== p.id)
+                      )}
+                      className="w-4 h-4 accent-emerald-600"
+                    />
+                    <span className="text-sm text-gray-700">{p.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
             {message && <p className="text-sm text-center text-gray-600">{message}</p>}
             <button
               type="submit"
