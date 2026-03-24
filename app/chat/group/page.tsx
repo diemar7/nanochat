@@ -2,6 +2,48 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+
+function AudioPlayer({ url, isMe }: { url: string; isMe: boolean }) {
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [duration, setDuration] = useState(0)
+
+  function toggle() {
+    const a = audioRef.current
+    if (!a) return
+    if (playing) { a.pause() } else { a.play() }
+    setPlaying(!playing)
+  }
+
+  function fmt(s: number) {
+    if (!isFinite(s)) return '0:00'
+    return `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+  }
+
+  return (
+    <div className="px-3 py-2.5 flex items-center gap-2 min-w-[160px]">
+      <audio
+        ref={audioRef}
+        src={url}
+        onTimeUpdate={e => setProgress((e.currentTarget.currentTime / (e.currentTarget.duration || 1)) * 100)}
+        onLoadedMetadata={e => setDuration(e.currentTarget.duration)}
+        onEnded={() => { setPlaying(false); setProgress(0); if (audioRef.current) audioRef.current.currentTime = 0 }}
+      />
+      <button onClick={toggle} className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm ${isMe ? 'bg-white/20 text-white' : 'text-white'}`} style={isMe ? {} : { backgroundColor: '#1a7a4a' }}>
+        {playing ? '⏸' : '▶'}
+      </button>
+      <div className="flex-1 flex flex-col gap-0.5">
+        <div className={`h-1 rounded-full overflow-hidden ${isMe ? 'bg-white/30' : 'bg-gray-200'}`}>
+          <div className={`h-full rounded-full ${isMe ? 'bg-white' : 'bg-emerald-500'}`} style={{ width: `${progress}%`, transition: 'width 0.1s' }} />
+        </div>
+        <span className={`text-xs ${isMe ? 'text-white/70' : 'text-gray-400'}`}>{fmt(duration)}</span>
+      </div>
+    </div>
+  )
+}
+
+
 import { getSupabase } from '@/lib/supabase'
 import type { Message, Person, MessageReaction } from '@/lib/types'
 import { usePushSubscription } from '@/lib/usePushSubscription'
@@ -17,6 +59,11 @@ export default function GroupChatPage() {
   const [reactions, setReactions] = useState<Record<string, MessageReaction[]>>({})
   const [pickerMsgId, setPickerMsgId] = useState<string | null>(null)
   const [replyingTo, setReplyingTo] = useState<Message | null>(null)
+  const [recording, setRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [headerHeight, setHeaderHeight] = useState(80)
   const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -221,6 +268,57 @@ export default function GroupChatPage() {
     return grouped
   }
 
+  async function startRecording() {
+    if (!me) return
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      audioChunksRef.current = []
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      mr.start()
+      mediaRecorderRef.current = mr
+      setRecording(true)
+      setRecordingSeconds(0)
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
+    } catch {
+      // sin permiso, no hacer nada
+    }
+  }
+
+  async function stopRecording() {
+    if (!mediaRecorderRef.current || !me) return
+    const mr = mediaRecorderRef.current
+    if (recordingTimerRef.current) clearInterval(recordingTimerRef.current)
+    setRecording(false)
+    setRecordingSeconds(0)
+    mr.stream.getTracks().forEach(t => t.stop())
+
+    await new Promise<void>(resolve => { mr.onstop = () => resolve(); mr.stop() })
+
+    const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+    if (blob.size < 1000) return
+
+    setSending(true)
+    const supabase = getSupabase()
+    const fileName = `${Date.now()}-${me.id}.webm`
+    const { error } = await supabase.storage.from('audios').upload(fileName, blob, { contentType: 'audio/webm' })
+    if (error) { setSending(false); return }
+    const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName)
+    const replyId = replyingTo?.id ?? null
+    setReplyingTo(null)
+    const { data } = await supabase
+      .from('messages')
+      .insert({ user_id: me.id, content: '', conversation_id: null, reply_to_id: replyId, audio_url: urlData.publicUrl })
+      .select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))')
+      .single()
+    if (data) setMessages(prev => [...prev, data as unknown as Message])
+    setSending(false)
+  }
+
+  function formatSeconds(s: number) {
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+  }
+
   function formatTime(ts: string | null) {
     if (!ts) return ''
     return new Date(ts).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
@@ -274,25 +372,53 @@ export default function GroupChatPage() {
             <button onClick={() => setReplyingTo(null)} className="text-gray-400 text-lg leading-none">×</button>
           </div>
         )}
-        <form onSubmit={sendMessage} className="px-4 py-3 flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={handleInputChange}
-            placeholder="Escribí un mensaje..."
-            autoComplete="off"
-            className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 text-sm bg-gray-50"
-            style={{ '--tw-ring-color': '#1a7a4a' } as React.CSSProperties}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || sending}
-            className="w-10 h-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition active:scale-95"
-            style={{ backgroundColor: '#1a7a4a' }}
-          >
-            ➤
-          </button>
-        </form>
+        {recording ? (
+          <div className="px-4 py-3 flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-sm text-gray-600 flex-1">Grabando... {formatSeconds(recordingSeconds)}</span>
+            <button
+              onMouseUp={stopRecording}
+              onTouchEnd={stopRecording}
+              className="w-10 h-10 flex items-center justify-center rounded-full text-white"
+              style={{ backgroundColor: '#dc2626' }}
+            >
+              ■
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={sendMessage} className="px-4 py-3 flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={handleInputChange}
+              placeholder="Escribí un mensaje..."
+              autoComplete="off"
+              className="flex-1 px-4 py-2.5 rounded-full border border-gray-200 focus:outline-none focus:ring-2 text-sm bg-gray-50"
+              style={{ '--tw-ring-color': '#1a7a4a' } as React.CSSProperties}
+            />
+            {input.trim() ? (
+              <button
+                type="submit"
+                disabled={sending}
+                className="w-10 h-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition active:scale-95"
+                style={{ backgroundColor: '#1a7a4a' }}
+              >
+                ➤
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={sending}
+                onMouseDown={startRecording}
+                onTouchStart={startRecording}
+                className="w-10 h-10 flex items-center justify-center rounded-full text-white disabled:opacity-40 transition active:scale-95"
+                style={{ backgroundColor: '#1a7a4a' }}
+              >
+                🎤
+              </button>
+            )}
+          </form>
+        )}
       </div>
 
       {/* Mensajes — scroll en el medio */}
@@ -360,7 +486,11 @@ export default function GroupChatPage() {
                       <p className={`truncate ${isMe ? 'text-white/70' : 'text-gray-500'}`}>{msg.reply_to.content}</p>
                     </div>
                   )}
-                  <div className="px-4 py-2.5">{msg.content}</div>
+                  {msg.audio_url ? (
+                    <AudioPlayer url={msg.audio_url} isMe={isMe} />
+                  ) : (
+                    <div className="px-4 py-2.5">{msg.content}</div>
+                  )}
                 </div>
                 {hasReactions && (
                   <div className="flex flex-wrap gap-1 px-1">

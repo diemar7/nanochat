@@ -106,6 +106,7 @@ export type Database = {
       }
       messages: {
         Row: {
+          audio_url: string | null
           content: string
           conversation_id: string | null
           created_at: string | null
@@ -114,6 +115,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          audio_url?: string | null
           content: string
           conversation_id?: string | null
           created_at?: string | null
@@ -122,6 +124,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          audio_url?: string | null
           content?: string
           conversation_id?: string | null
           created_at?: string | null
