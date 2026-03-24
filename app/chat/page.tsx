@@ -104,6 +104,33 @@ export default function ChatPage() {
       await loadLastMessages(convIds)
 
       setLoading(false)
+
+      // Suscribir Realtime DESPUÉS de que los refs estén cargados
+      const supabase2 = getSupabase()
+      const channel = supabase2
+        .channel('chat-list-messages')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+          const uid = meIdRef.current
+          const cIds = convIdsRef.current
+          if (!uid) return
+          const msg = payload.new as { user_id: string; conversation_id: string | null; content: string; audio_url?: string | null; created_at: string }
+          // Actualizar último mensaje
+          if (msg.conversation_id === GROUP_CONV_ID) {
+            setLastGroupMessage({ content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id })
+          } else if (msg.conversation_id && cIds.includes(msg.conversation_id)) {
+            setLastMessages(prev => ({ ...prev, [msg.conversation_id!]: { content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id } }))
+          }
+          // Actualizar no leídos (solo mensajes de otros)
+          if (msg.user_id === uid) return
+          if (msg.conversation_id === GROUP_CONV_ID && inGroupRef.current) {
+            setUnreadConvIds(prev => new Set([...prev, GROUP_CONV_ID]))
+          } else if (msg.conversation_id && cIds.includes(msg.conversation_id)) {
+            setUnreadConvIds(prev => new Set([...prev, msg.conversation_id!]))
+          }
+        })
+        .subscribe()
+
+      return () => { supabase2.removeChannel(channel) }
     }
 
     async function loadLastMessages(convIds: string[]) {
@@ -182,32 +209,6 @@ export default function ChatPage() {
     }
 
     init()
-
-    const supabase2 = getSupabase()
-    const channel = supabase2
-      .channel('chat-list-messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
-        const userId = meIdRef.current
-        const convIds = convIdsRef.current
-        if (!userId) return
-        const msg = payload.new as { user_id: string; conversation_id: string | null; content: string; audio_url?: string | null; created_at: string }
-        // Actualizar último mensaje
-        if (msg.conversation_id === GROUP_CONV_ID) {
-          setLastGroupMessage({ content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id })
-        } else if (msg.conversation_id && convIds.includes(msg.conversation_id)) {
-          setLastMessages(prev => ({ ...prev, [msg.conversation_id!]: { content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id } }))
-        }
-        // Actualizar no leídos (solo mensajes de otros)
-        if (msg.user_id === userId) return
-        if (msg.conversation_id === GROUP_CONV_ID && inGroupRef.current) {
-          setUnreadConvIds(prev => new Set([...prev, GROUP_CONV_ID]))
-        } else if (msg.conversation_id && convIds.includes(msg.conversation_id)) {
-          setUnreadConvIds(prev => new Set([...prev, msg.conversation_id!]))
-        }
-      })
-      .subscribe()
-
-    return () => { supabase2.removeChannel(channel) }
   }, [router])
 
   async function startConversation(other: Person) {
