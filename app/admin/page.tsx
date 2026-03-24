@@ -38,45 +38,23 @@ export default function AdminPage() {
     e.preventDefault()
     setLoading(true)
     setMessage('')
-    const supabase = getSupabase()
-    const { data, error } = await supabase.auth.signUp({ email: newEmail, password: newPassword })
 
-    if (error || !data.user) {
-      setMessage('Error al crear el usuario: ' + (error?.message || 'desconocido'))
-      setLoading(false)
-      return
-    }
-
-    const { error: insertError } = await supabase.from('people').insert({
-      id: data.user.id,
-      name: newName,
-      email: newEmail,
-      is_admin: false,
+    const res = await fetch('/api/admin/create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: newEmail, password: newPassword, name: newName, directsWith }),
     })
+    const json = await res.json()
 
-    if (insertError) {
-      setMessage('Usuario creado pero error al guardar perfil: ' + insertError.message)
+    if (!res.ok) {
+      setMessage('Error: ' + (json.error || 'desconocido'))
       setLoading(false)
       return
-    }
-
-    // Crear chats directos seleccionados
-    for (const otherId of directsWith) {
-      const { data: conv } = await supabase
-        .from('conversations')
-        .insert({ is_group: false })
-        .select('id')
-        .single()
-      if (conv) {
-        await supabase.from('conversation_members').insert([
-          { conversation_id: conv.id, person_id: data.user.id },
-          { conversation_id: conv.id, person_id: otherId },
-        ])
-      }
     }
 
     setMessage(`✅ ${newName} agregado correctamente`)
     setNewEmail(''); setNewName(''); setNewPassword(''); setDirectsWith([])
+    const supabase = getSupabase()
     const { data: updated } = await supabase.from('people').select('*').order('created_at')
     setPeople((updated as Person[]) || [])
     setLoading(false)
