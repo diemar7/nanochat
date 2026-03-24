@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(req: Request) {
-  const { email, password, name, directsWith } = await req.json()
+  const { email, password, name, directsWith, addToGroup } = await req.json()
   if (!email || !password || !name) {
     return NextResponse.json({ error: 'faltan datos' }, { status: 400 })
   }
@@ -33,6 +33,14 @@ export async function POST(req: Request) {
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 })
+  }
+
+  // Agregar al grupo Familia si se eligió
+  if (addToGroup) {
+    await supabaseAdmin.from('conversation_members').insert({
+      conversation_id: '00000000-0000-0000-0000-000000000001',
+      person_id: data.user.id,
+    })
   }
 
   // Crear chats directos seleccionados

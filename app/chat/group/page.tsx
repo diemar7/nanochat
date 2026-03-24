@@ -48,6 +48,8 @@ import { getSupabase } from '@/lib/supabase'
 import type { Message, Person, MessageReaction } from '@/lib/types'
 import { usePushSubscription } from '@/lib/usePushSubscription'
 
+const GROUP_CONV_ID = '00000000-0000-0000-0000-000000000001'
+
 export default function GroupChatPage() {
   const router = useRouter()
   const [me, setMe] = useState<Person | null>(null)
@@ -85,7 +87,7 @@ export default function GroupChatPage() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.ready.then((reg) => {
-        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', tag: 'group' })
+        reg.active?.postMessage({ type: 'CLEAR_NOTIFICATIONS', tag: GROUP_CONV_ID })
       })
     }
   }, [])
@@ -99,15 +101,33 @@ export default function GroupChatPage() {
 
       const { data: person } = await supabase.from('people').select('*').eq('id', session.user.id).single()
       if (!person) { router.replace('/login'); return }
+
+      // Verificar que el usuario es miembro del grupo
+      const { data: membership } = await supabase
+        .from('conversation_members')
+        .select('person_id')
+        .eq('conversation_id', GROUP_CONV_ID)
+        .eq('person_id', session.user.id)
+        .single()
+
+      if (!membership) { router.replace('/chat'); return }
+
       setMe(person as Person)
 
-      const { data: people } = await supabase.from('people').select('*')
+      // Cargar solo los miembros del grupo
+      const { data: members } = await supabase
+        .from('conversation_members')
+        .select('person_id')
+        .eq('conversation_id', GROUP_CONV_ID)
+
+      const memberIds = (members || []).map((m: { person_id: string }) => m.person_id)
+      const { data: people } = await supabase.from('people').select('*').in('id', memberIds)
       setAllPeople((people as Person[]) || [])
 
       const { data: msgs } = await supabase
         .from('messages')
         .select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))')
-        .is('conversation_id', null)
+        .eq('conversation_id', GROUP_CONV_ID)
         .order('created_at', { ascending: false })
         .limit(100)
 
@@ -135,9 +155,9 @@ export default function GroupChatPage() {
       const now = new Date().toISOString()
       await supabase.from('read_receipts').delete()
         .eq('person_id', session.user.id)
-        .is('conversation_id', null)
+        .eq('conversation_id', GROUP_CONV_ID)
       await supabase.from('read_receipts').insert(
-        { person_id: session.user.id, conversation_id: null, last_read_at: now }
+        { person_id: session.user.id, conversation_id: GROUP_CONV_ID, last_read_at: now }
       )
     }
 
@@ -146,7 +166,7 @@ export default function GroupChatPage() {
     const supabase2 = getSupabase()
     const channel = supabase2
       .channel('group-messages')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: 'conversation_id=is.null' }, async (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${GROUP_CONV_ID}` }, async (payload) => {
         const { data } = await supabase2.from('messages').select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))').eq('id', payload.new.id).single()
         if (data) setMessages(prev => prev.some(m => m.id === data.id) ? prev : [...prev, data as unknown as Message])
       })
@@ -219,7 +239,7 @@ export default function GroupChatPage() {
     const supabase = getSupabase()
     const { data } = await supabase
       .from('messages')
-      .insert({ user_id: me.id, content, conversation_id: null, reply_to_id: replyId })
+      .insert({ user_id: me.id, content, conversation_id: GROUP_CONV_ID, reply_to_id: replyId })
       .select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))')
       .single()
     if (data) setMessages(prev => [...prev, data as unknown as Message])
@@ -308,7 +328,7 @@ export default function GroupChatPage() {
     setReplyingTo(null)
     const { data } = await supabase
       .from('messages')
-      .insert({ user_id: me.id, content: '', conversation_id: null, reply_to_id: replyId, audio_url: urlData.publicUrl })
+      .insert({ user_id: me.id, content: '', conversation_id: GROUP_CONV_ID, reply_to_id: replyId, audio_url: urlData.publicUrl })
       .select('*, people(id, name), reply_to:reply_to_id(id, content, people(id, name))')
       .single()
     if (data) setMessages(prev => [...prev, data as unknown as Message])

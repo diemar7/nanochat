@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Person, Conversation } from '@/lib/types'
 
+const GROUP_CONV_ID = '00000000-0000-0000-0000-000000000001'
+
 const AVATAR_COLORS = [
   'bg-emerald-400',
   'bg-teal-400',
@@ -35,7 +37,8 @@ export default function ChatPage() {
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [people, setPeople] = useState<Person[]>([])
   const [loading, setLoading] = useState(true)
-  const [unreadConvIds, setUnreadConvIds] = useState<Set<string | null>>(new Set())
+  const [unreadConvIds, setUnreadConvIds] = useState<Set<string>>(new Set())
+  const [inGroup, setInGroup] = useState(false)
   const [lastMessages, setLastMessages] = useState<Record<string, { content: string; audio_url?: string | null; created_at: string | null; user_id: string }>>({})
   const [lastGroupMessage, setLastGroupMessage] = useState<{ content: string; audio_url?: string | null; created_at: string | null; user_id: string } | null>(null)
   const meIdRef = useRef<string | null>(null)
@@ -62,10 +65,13 @@ export default function ChatPage() {
         .select('conversation_id')
         .eq('person_id', session.user.id)
 
-      const convIds = (memberships || []).map((m: { conversation_id: string }) => m.conversation_id)
+      const allConvIds = (memberships || []).map((m: { conversation_id: string }) => m.conversation_id)
+      const isInGroup = allConvIds.includes(GROUP_CONV_ID)
+      setInGroup(isInGroup)
+      const convIds = allConvIds.filter((id: string) => id !== GROUP_CONV_ID)
       convIdsRef.current = convIds
 
-      if (convIds.length > 0) {
+      if (convIds.length > 0 || isInGroup) {
         const { data: convs } = await supabase
           .from('conversations')
           .select('*')
@@ -105,7 +111,7 @@ export default function ChatPage() {
       const { data: groupMsg } = await supabase
         .from('messages')
         .select('content, audio_url, created_at, user_id')
-        .is('conversation_id', null)
+        .eq('conversation_id', GROUP_CONV_ID)
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
@@ -129,7 +135,7 @@ export default function ChatPage() {
 
     async function loadUnread(userId: string, convIds: string[]) {
       const supabase = getSupabase()
-      const unread = new Set<string | null>()
+      const unread = new Set<string>()
 
       // Leer read_receipts del usuario
       const { data: receipts } = await supabase
@@ -137,25 +143,22 @@ export default function ChatPage() {
         .select('conversation_id, last_read_at')
         .eq('person_id', userId)
 
-      const receiptMap = new Map<string | null, string>(
-        (receipts || []).map((r: { conversation_id: string | null; last_read_at: string }) => [r.conversation_id, r.last_read_at])
+      const receiptMap = new Map<string, string>(
+        (receipts || [])
+          .filter((r: { conversation_id: string | null }) => r.conversation_id !== null)
+          .map((r: { conversation_id: string; last_read_at: string }) => [r.conversation_id, r.last_read_at])
       )
 
-      console.log('[unread] receipts:', receipts)
-      console.log('[unread] receiptMap:', [...receiptMap.entries()])
-
-      // Chequear grupal (conversation_id = null)
-      const groupLastRead = receiptMap.get(null) ?? null
-      const { count: groupCount, error: groupErr } = await supabase
+      // Chequear grupal
+      const groupLastRead = receiptMap.get(GROUP_CONV_ID) ?? null
+      const { count: groupCount } = await supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
-        .is('conversation_id', null)
+        .eq('conversation_id', GROUP_CONV_ID)
         .neq('user_id', userId)
         .gt('created_at', groupLastRead ?? '1970-01-01')
 
-      console.log('[unread] groupCount:', groupCount, 'groupErr:', groupErr, 'groupLastRead:', groupLastRead)
-
-      if ((groupCount ?? 0) > 0) unread.add(null)
+      if ((groupCount ?? 0) > 0) unread.add(GROUP_CONV_ID)
 
       // Chequear 1 a 1
       for (const convId of convIds) {
@@ -184,14 +187,14 @@ export default function ChatPage() {
         if (!userId) return
         const msg = payload.new as { user_id: string; conversation_id: string | null; content: string; audio_url?: string | null; created_at: string }
         // Actualizar último mensaje
-        if (msg.conversation_id === null) {
+        if (msg.conversation_id === GROUP_CONV_ID) {
           setLastGroupMessage({ content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id })
         } else if (convIds.includes(msg.conversation_id)) {
           setLastMessages(prev => ({ ...prev, [msg.conversation_id!]: { content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id } }))
         }
         // Actualizar no leídos (solo mensajes de otros)
         if (msg.user_id === userId) return
-        if (msg.conversation_id === null || convIds.includes(msg.conversation_id)) {
+        if (msg.conversation_id === GROUP_CONV_ID || convIds.includes(msg.conversation_id)) {
           loadUnread(userId, convIds)
         }
       })
@@ -297,28 +300,32 @@ export default function ChatPage() {
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10" style={{ backgroundColor: '#f0faf4' }}>
 
         {/* Grupos */}
-        <h2 className="font-bold text-gray-700 text-base mb-3 px-1">Grupos</h2>
-        <button
-          onClick={() => router.push('/chat/group')}
-          className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform hover:shadow-md mb-6"
-        >
-          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-xl flex-shrink-0">
-            🏠
-          </div>
-          <div className="flex-1 text-left min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-semibold text-gray-800">Familia</p>
-              {lastGroupMessage && <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(lastGroupMessage.created_at)}</span>}
-            </div>
-            <p className="text-xs text-gray-400 mt-0.5 truncate">
-              {lastGroupMessage ? (lastGroupMessage.audio_url ? '🎤 Audio' : lastGroupMessage.content) : 'Chat grupal'}
-            </p>
-          </div>
-          {unreadConvIds.has(null) && (
-            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: '#1a7a4a' }} />
-          )}
-          <span className="text-gray-300 text-xl">›</span>
-        </button>
+        {inGroup && (
+          <>
+            <h2 className="font-bold text-gray-700 text-base mb-3 px-1">Grupos</h2>
+            <button
+              onClick={() => router.push('/chat/group')}
+              className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform hover:shadow-md mb-6"
+            >
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-xl flex-shrink-0">
+                🏠
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-gray-800">Familia</p>
+                  {lastGroupMessage && <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(lastGroupMessage.created_at)}</span>}
+                </div>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">
+                  {lastGroupMessage ? (lastGroupMessage.audio_url ? '🎤 Audio' : lastGroupMessage.content) : 'Chat grupal'}
+                </p>
+              </div>
+              {unreadConvIds.has(GROUP_CONV_ID) && (
+                <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: '#1a7a4a' }} />
+              )}
+              <span className="text-gray-300 text-xl">›</span>
+            </button>
+          </>
+        )}
 
         {/* Mensajes directos */}
         <h2 className="font-bold text-gray-700 text-base mb-3 px-1">Mensajes directos</h2>

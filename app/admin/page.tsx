@@ -13,6 +13,7 @@ export default function AdminPage() {
   const [newName, setNewName] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [directsWith, setDirectsWith] = useState<string[]>([])
+  const [addToGroup, setAddToGroup] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -42,7 +43,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/create-user', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: newEmail, password: newPassword, name: newName, directsWith }),
+      body: JSON.stringify({ email: newEmail, password: newPassword, name: newName, directsWith, addToGroup }),
     })
     const json = await res.json()
 
@@ -53,7 +54,7 @@ export default function AdminPage() {
     }
 
     setMessage(`✅ ${newName} agregado correctamente`)
-    setNewEmail(''); setNewName(''); setNewPassword(''); setDirectsWith([])
+    setNewEmail(''); setNewName(''); setNewPassword(''); setDirectsWith([]); setAddToGroup(false)
     const supabase = getSupabase()
     const { data: updated } = await supabase.from('people').select('*').order('created_at')
     setPeople((updated as Person[]) || [])
@@ -126,6 +127,17 @@ export default function AdminPage() {
               minLength={6}
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 bg-gray-50"
             />
+            {/* Grupo Familia */}
+            <label className="flex items-center gap-3 px-3 py-2 rounded-xl border border-gray-100 bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={addToGroup}
+                onChange={e => setAddToGroup(e.target.checked)}
+                className="w-4 h-4 accent-emerald-600"
+              />
+              <span className="text-sm text-gray-700">Agregar al grupo <strong>Familia</strong> 🏠</span>
+            </label>
+
             {/* Chats directos */}
             {people.length > 0 && (
               <div className="space-y-2">
