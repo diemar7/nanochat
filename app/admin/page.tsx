@@ -62,8 +62,16 @@ export default function AdminPage() {
 
   async function removeUser(person: Person) {
     if (!confirm(`¿Eliminar a ${person.name}?`)) return
-    const supabase = getSupabase()
-    await supabase.from('people').delete().eq('id', person.id)
+    const res = await fetch('/api/admin/delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: person.id }),
+    })
+    if (!res.ok) {
+      const json = await res.json()
+      alert('Error al eliminar: ' + (json.error || 'desconocido'))
+      return
+    }
     setPeople(prev => prev.filter(p => p.id !== person.id))
   }
 
