@@ -16,6 +16,7 @@ export default function AdminPage() {
   const [addToGroup, setAddToGroup] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [lastCreated, setLastCreated] = useState<{ name: string; email: string; password: string } | null>(null)
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -54,6 +55,7 @@ export default function AdminPage() {
     }
 
     setMessage(`✅ ${newName} agregado correctamente`)
+    setLastCreated({ name: newName, email: newEmail, password: newPassword })
     setNewEmail(''); setNewName(''); setNewPassword(''); setDirectsWith([]); setAddToGroup(false)
     const supabase = getSupabase()
     const { data: updated } = await supabase.from('people').select('*').order('created_at')
@@ -80,6 +82,34 @@ export default function AdminPage() {
     const supabase = getSupabase()
     await supabase.from('people').update({ is_admin: !person.is_admin }).eq('id', person.id)
     setPeople(prev => prev.map(p => p.id === person.id ? { ...p, is_admin: !p.is_admin } : p))
+  }
+
+  function shareOnWhatsApp(user: { name: string; email: string; password: string }) {
+    const texto = `¡Hola ${user.name}! 👋
+
+Te invito a *NanoChat*, la app de la familia para chatear con Nano 💚
+
+📲 *Cómo instalarla:*
+
+*En Android:*
+1. Abrí este link en Chrome: https://nanochat-three.vercel.app
+2. Tocá los 3 puntitos (⋮) arriba a la derecha
+3. Tocá *"Agregar a pantalla de inicio"*
+4. Confirmá tocando *"Agregar"*
+
+*En iPhone:*
+1. Abrí este link en Safari: https://nanochat-three.vercel.app
+2. Tocá el botón compartir (□↑) abajo en el centro
+3. Tocá *"Agregar a pantalla de inicio"*
+4. Tocá *"Agregar"* arriba a la derecha
+
+🔑 *Tus datos para entrar:*
+• Usuario: ${user.email}
+• Contraseña: ${user.password}
+
+¡Ya podés chatear con la familia! 🎉`
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank')
   }
 
   const COLORS = ['bg-emerald-400', 'bg-teal-400', 'bg-cyan-400', 'bg-lime-500', 'bg-green-400']
@@ -158,6 +188,16 @@ export default function AdminPage() {
               </div>
             )}
             {message && <p className="text-sm text-center text-gray-600">{message}</p>}
+            {lastCreated && (
+              <button
+                type="button"
+                onClick={() => shareOnWhatsApp(lastCreated)}
+                className="w-full py-3 rounded-xl font-bold text-sm text-white transition active:scale-95 flex items-center justify-center gap-2"
+                style={{ backgroundColor: '#25d366' }}
+              >
+                📲 Compartir acceso por WhatsApp
+              </button>
+            )}
             <button
               type="submit"
               disabled={loading}
