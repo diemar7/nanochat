@@ -36,8 +36,8 @@ export default function ChatPage() {
   const [people, setPeople] = useState<Person[]>([])
   const [loading, setLoading] = useState(true)
   const [unreadConvIds, setUnreadConvIds] = useState<Set<string | null>>(new Set())
-  const [lastMessages, setLastMessages] = useState<Record<string, { content: string; created_at: string | null; user_id: string }>>({})
-  const [lastGroupMessage, setLastGroupMessage] = useState<{ content: string; created_at: string | null; user_id: string } | null>(null)
+  const [lastMessages, setLastMessages] = useState<Record<string, { content: string; audio_url?: string | null; created_at: string | null; user_id: string }>>({})
+  const [lastGroupMessage, setLastGroupMessage] = useState<{ content: string; audio_url?: string | null; created_at: string | null; user_id: string } | null>(null)
   const meIdRef = useRef<string | null>(null)
   const convIdsRef = useRef<string[]>([])
 
@@ -104,7 +104,7 @@ export default function ChatPage() {
       // Último mensaje del grupo
       const { data: groupMsg } = await supabase
         .from('messages')
-        .select('content, created_at, user_id')
+        .select('content, audio_url, created_at, user_id')
         .is('conversation_id', null)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -113,11 +113,11 @@ export default function ChatPage() {
 
       // Últimos mensajes de cada conv 1 a 1
       if (convIds.length === 0) return
-      const map: Record<string, { content: string; created_at: string | null; user_id: string }> = {}
+      const map: Record<string, { content: string; audio_url?: string | null; created_at: string | null; user_id: string }> = {}
       await Promise.all(convIds.map(async (convId) => {
         const { data } = await supabase
           .from('messages')
-          .select('content, created_at, user_id')
+          .select('content, audio_url, created_at, user_id')
           .eq('conversation_id', convId)
           .order('created_at', { ascending: false })
           .limit(1)
@@ -182,12 +182,12 @@ export default function ChatPage() {
         const userId = meIdRef.current
         const convIds = convIdsRef.current
         if (!userId) return
-        const msg = payload.new as { user_id: string; conversation_id: string | null; content: string; created_at: string }
+        const msg = payload.new as { user_id: string; conversation_id: string | null; content: string; audio_url?: string | null; created_at: string }
         // Actualizar último mensaje
         if (msg.conversation_id === null) {
-          setLastGroupMessage({ content: msg.content, created_at: msg.created_at, user_id: msg.user_id })
+          setLastGroupMessage({ content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id })
         } else if (convIds.includes(msg.conversation_id)) {
-          setLastMessages(prev => ({ ...prev, [msg.conversation_id!]: { content: msg.content, created_at: msg.created_at, user_id: msg.user_id } }))
+          setLastMessages(prev => ({ ...prev, [msg.conversation_id!]: { content: msg.content, audio_url: msg.audio_url, created_at: msg.created_at, user_id: msg.user_id } }))
         }
         // Actualizar no leídos (solo mensajes de otros)
         if (msg.user_id === userId) return
@@ -239,8 +239,6 @@ export default function ChatPage() {
     await supabase.auth.signOut()
     router.replace('/login')
   }
-
-  const otherPeople = people.filter(p => p.id !== me?.id)
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-white">
@@ -313,7 +311,7 @@ export default function ChatPage() {
               {lastGroupMessage && <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(lastGroupMessage.created_at)}</span>}
             </div>
             <p className="text-xs text-gray-400 mt-0.5 truncate">
-              {lastGroupMessage ? lastGroupMessage.content : 'Chat grupal'}
+              {lastGroupMessage ? (lastGroupMessage.audio_url ? '🎤 Audio' : lastGroupMessage.content) : 'Chat grupal'}
             </p>
           </div>
           {unreadConvIds.has(null) && (
@@ -329,15 +327,18 @@ export default function ChatPage() {
           <div className="flex justify-center py-8">
             <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
           </div>
+        ) : conversations.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No tenés chats directos todavía</p>
         ) : (
           <div className="space-y-3">
-            {otherPeople.map((person, i) => {
-              const existing = conversations.find(c => c.other?.id === person.id)
-              const hasUnread = existing ? unreadConvIds.has(existing.id) : false
+            {conversations.map((conv, i) => {
+              const person = conv.other
+              if (!person) return null
+              const hasUnread = unreadConvIds.has(conv.id)
               return (
                 <button
-                  key={person.id}
-                  onClick={() => startConversation(person)}
+                  key={conv.id}
+                  onClick={() => router.push(`/chat/${conv.id}`)}
                   className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform hover:shadow-md"
                 >
                   <div className={`w-11 h-11 rounded-full ${AVATAR_COLORS[i % AVATAR_COLORS.length]} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
@@ -346,12 +347,14 @@ export default function ChatPage() {
                   <div className="flex-1 text-left min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className={`font-semibold text-gray-800 ${hasUnread ? 'font-black' : ''} truncate`}>{person.name}</p>
-                      {existing && lastMessages[existing.id] && (
-                        <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(lastMessages[existing.id].created_at)}</span>
+                      {lastMessages[conv.id] && (
+                        <span className="text-xs text-gray-400 flex-shrink-0">{formatTime(lastMessages[conv.id].created_at)}</span>
                       )}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5 truncate">
-                      {existing && lastMessages[existing.id] ? lastMessages[existing.id].content : (existing ? 'Conversación activa' : 'Iniciar chat')}
+                      {lastMessages[conv.id]
+                        ? (lastMessages[conv.id].audio_url ? '🎤 Audio' : lastMessages[conv.id].content)
+                        : 'Conversación activa'}
                     </p>
                   </div>
                   {hasUnread && (
