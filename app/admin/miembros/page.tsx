@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import type { Person } from '@/lib/types'
 
+type EditState = { name: string; email: string; password: string; is_admin: boolean }
+
 export default function AdminMiembrosPage() {
   const router = useRouter()
   const [me, setMe] = useState<Person | null>(null)
@@ -18,6 +20,9 @@ export default function AdminMiembrosPage() {
   const [message, setMessage] = useState('')
   const [lastCreated, setLastCreated] = useState<{ name: string; email: string; password: string } | null>(null)
   const [shareTarget, setShareTarget] = useState<{ person: Person; password: string } | null>(null)
+  const [editTarget, setEditTarget] = useState<{ person: Person; state: EditState } | null>(null)
+  const [editSaving, setEditSaving] = useState(false)
+  const [editMessage, setEditMessage] = useState('')
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -83,6 +88,49 @@ export default function AdminMiembrosPage() {
     const supabase = getSupabase()
     await supabase.from('people').update({ is_admin: !person.is_admin }).eq('id', person.id)
     setPeople(prev => prev.map(p => p.id === person.id ? { ...p, is_admin: !p.is_admin } : p))
+  }
+
+  function openEdit(person: Person) {
+    setEditTarget({
+      person,
+      state: { name: person.name, email: person.email, password: '', is_admin: person.is_admin ?? false },
+    })
+    setEditMessage('')
+    setShareTarget(null)
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editTarget) return
+    setEditSaving(true)
+    setEditMessage('')
+
+    const res = await fetch('/api/admin/update-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: editTarget.person.id,
+        name: editTarget.state.name,
+        email: editTarget.state.email,
+        password: editTarget.state.password || undefined,
+        is_admin: editTarget.state.is_admin,
+      }),
+    })
+    const json = await res.json()
+
+    if (!res.ok) {
+      setEditMessage('Error: ' + (json.error || 'desconocido'))
+      setEditSaving(false)
+      return
+    }
+
+    setPeople(prev => prev.map(p =>
+      p.id === editTarget.person.id
+        ? { ...p, name: editTarget.state.name, email: editTarget.state.email, is_admin: editTarget.state.is_admin }
+        : p
+    ))
+    setEditTarget(null)
+    setEditSaving(false)
   }
 
   function shareOnWhatsApp(user: { name: string; email: string; password: string }) {
@@ -237,11 +285,11 @@ Te invito a *NanoChat*, la app de la familia para chatear con Nano 💚
                     📲
                   </button>
                   <button
-                    onClick={() => toggleAdmin(person)}
-                    className="text-gray-400 hover:text-emerald-600 transition text-sm"
-                    title={person.is_admin ? 'Quitar admin' : 'Hacer admin'}
+                    onClick={() => editTarget?.person.id === person.id ? setEditTarget(null) : openEdit(person)}
+                    className="text-gray-300 hover:text-blue-400 transition text-sm"
+                    title="Editar"
                   >
-                    {person.is_admin ? '↓' : '↑'}
+                    ✏️
                   </button>
                   <button
                     onClick={() => removeUser(person)}
@@ -252,6 +300,64 @@ Te invito a *NanoChat*, la app de la familia para chatear con Nano 💚
                   </button>
                 </div>
               )}
+
+              {/* Formulario de edición inline */}
+              {editTarget?.person.id === person.id && (
+                <form onSubmit={saveEdit} className="w-full mt-2 space-y-2">
+                  {editMessage && <p className="text-xs text-red-500">{editMessage}</p>}
+                  <input
+                    type="text"
+                    placeholder="Nombre"
+                    value={editTarget.state.name}
+                    onChange={e => setEditTarget({ ...editTarget, state: { ...editTarget.state, name: e.target.value } })}
+                    required
+                    className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                  <input
+                    type="email"
+                    placeholder="Email"
+                    value={editTarget.state.email}
+                    onChange={e => setEditTarget({ ...editTarget, state: { ...editTarget.state, email: e.target.value } })}
+                    required
+                    className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Nueva contraseña (opcional)"
+                    value={editTarget.state.password}
+                    onChange={e => setEditTarget({ ...editTarget, state: { ...editTarget.state, password: e.target.value } })}
+                    minLength={6}
+                    className="w-full px-3 py-1.5 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                  />
+                  <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-gray-100 bg-gray-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editTarget.state.is_admin}
+                      onChange={e => setEditTarget({ ...editTarget, state: { ...editTarget.state, is_admin: e.target.checked } })}
+                      className="w-4 h-4 accent-emerald-600"
+                    />
+                    <span className="text-sm text-gray-700">Es admin</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={editSaving}
+                      className="flex-1 py-2 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+                      style={{ backgroundColor: '#1a7a4a' }}
+                    >
+                      {editSaving ? 'Guardando...' : 'Guardar'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditTarget(null)}
+                      className="flex-1 py-2 rounded-xl text-sm font-semibold bg-gray-100 text-gray-600"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              )}
+
               {shareTarget?.person.id === person.id && (
                 <div className="w-full mt-2 flex gap-2">
                   <input
