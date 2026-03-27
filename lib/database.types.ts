@@ -14,6 +14,124 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          color: string
+          created_at: string
+          created_by: string | null
+          emoji: string
+          id: string
+          name: string
+          notes: string | null
+          person_id: string
+          type: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          emoji?: string
+          id?: string
+          name: string
+          notes?: string | null
+          person_id: string
+          type: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          created_by?: string | null
+          emoji?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          person_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_events: {
+        Row: {
+          activity_id: string
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          time_of_day: string | null
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          time_of_day?: string | null
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          time_of_day?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_events_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_schedules: {
+        Row: {
+          activity_id: string
+          created_at: string
+          day_of_week: number
+          id: string
+          time_of_day: string
+        }
+        Insert: {
+          activity_id: string
+          created_at?: string
+          day_of_week: number
+          id?: string
+          time_of_day: string
+        }
+        Update: {
+          activity_id?: string
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          time_of_day?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_schedules_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_members: {
         Row: {
           conversation_id: string
@@ -138,6 +256,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
           {
