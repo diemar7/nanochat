@@ -10,7 +10,7 @@ const DAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
 function formatTime(t: string | null) {
   if (!t) return ''
-  return t.slice(0, 5) // HH:MM
+  return t.slice(0, 5)
 }
 
 function formatDate(d: string) {
@@ -33,9 +33,11 @@ type AgendaItem = {
 export default function AgendaPage() {
   const router = useRouter()
   const [me, setMe] = useState<Person | null>(null)
+  const [people, setPeople] = useState<Person[]>([])
+  const [viewingPersonId, setViewingPersonId] = useState<string | null>(null)
   const [activities, setActivities] = useState<ActivityWithSchedules[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedDay, setSelectedDay] = useState(0) // 0 = hoy, 1 = mañana, etc.
+  const [selectedDay, setSelectedDay] = useState(0)
 
   useEffect(() => {
     const supabase = getSupabase()
@@ -48,43 +50,66 @@ export default function AgendaPage() {
       if (!person) { router.replace('/login'); return }
       setMe(person as Person)
 
-      await loadActivities(session.user.id)
-      setLoading(false)
-    }
-
-    async function loadActivities(userId: string) {
-      const supabase = getSupabase()
-
-      const { data: acts } = await supabase
-        .from('activities')
-        .select('*')
-        .eq('person_id', userId)
-        .order('name')
-
-      if (!acts || acts.length === 0) {
-        setActivities([])
-        return
+      // Si es admin, cargar lista de personas
+      if (person.is_admin) {
+        const { data: allPeople } = await supabase.from('people').select('*').order('name')
+        const list = (allPeople as Person[]) || []
+        setPeople(list)
+        // Por defecto ver el primer no-admin (Nano), o el primero disponible
+        const defaultPerson = list.find(p => !p.is_admin) || list[0]
+        if (defaultPerson) {
+          setViewingPersonId(defaultPerson.id)
+          await loadActivities(defaultPerson.id)
+        }
+      } else {
+        setViewingPersonId(session.user.id)
+        await loadActivities(session.user.id)
       }
 
-      const actIds = acts.map((a: { id: string }) => a.id)
-
-      const [{ data: schedules }, { data: events }] = await Promise.all([
-        supabase.from('activity_schedules').select('*').in('activity_id', actIds),
-        supabase.from('activity_events').select('*').in('activity_id', actIds).gte('date', new Date().toISOString().slice(0, 10)),
-      ])
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const merged = acts.map((a: any) => ({
-        ...a,
-        schedules: (schedules || []).filter((s: { activity_id: string }) => s.activity_id === a.id),
-        events: (events || []).filter((e: { activity_id: string }) => e.activity_id === a.id),
-      }))
-
-      setActivities(merged)
+      setLoading(false)
     }
 
     init()
   }, [router])
+
+  async function loadActivities(userId: string) {
+    const supabase = getSupabase()
+    setLoading(true)
+
+    const { data: acts } = await supabase
+      .from('activities')
+      .select('*')
+      .eq('person_id', userId)
+      .order('name')
+
+    if (!acts || acts.length === 0) {
+      setActivities([])
+      setLoading(false)
+      return
+    }
+
+    const actIds = acts.map((a: { id: string }) => a.id)
+
+    const [{ data: schedules }, { data: events }] = await Promise.all([
+      supabase.from('activity_schedules').select('*').in('activity_id', actIds),
+      supabase.from('activity_events').select('*').in('activity_id', actIds).gte('date', new Date().toISOString().slice(0, 10)),
+    ])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const merged = acts.map((a: any) => ({
+      ...a,
+      schedules: (schedules || []).filter((s: { activity_id: string }) => s.activity_id === a.id),
+      events: (events || []).filter((e: { activity_id: string }) => e.activity_id === a.id),
+    }))
+
+    setActivities(merged)
+    setLoading(false)
+  }
+
+  async function handleSelectPerson(personId: string) {
+    setViewingPersonId(personId)
+    await loadActivities(personId)
+  }
 
   function getItemsForOffset(offset: number): AgendaItem[] {
     const target = new Date()
@@ -129,7 +154,6 @@ export default function AgendaPage() {
       }
     }
 
-    // Ordenar por hora (sin hora al final)
     items.sort((a, b) => {
       if (!a.time && !b.time) return 0
       if (!a.time) return 1
@@ -140,7 +164,6 @@ export default function AgendaPage() {
     return items
   }
 
-  // Próximos 7 días con algo
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() + i)
@@ -154,6 +177,8 @@ export default function AgendaPage() {
   const todayItems = getItemsForOffset(selectedDay)
   const selectedDate = new Date()
   selectedDate.setDate(selectedDate.getDate() + selectedDay)
+
+  const viewingPerson = people.find(p => p.id === viewingPersonId) || me
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-white">
@@ -174,13 +199,34 @@ export default function AgendaPage() {
             ‹
           </button>
           <div>
-            <h1 className="text-white font-black text-2xl tracking-tight leading-none">Mi Agenda</h1>
-            {me && <p className="text-white/50 text-xs mt-0.5">{me.name}</p>}
+            <h1 className="text-white font-black text-2xl tracking-tight leading-none">Agenda</h1>
+            {viewingPerson && (
+              <p className="text-white/50 text-xs mt-0.5">{viewingPerson.name}</p>
+            )}
           </div>
         </div>
 
+        {/* Selector de persona (solo admins) */}
+        {me?.is_admin && people.length > 1 && (
+          <div className="relative z-10 flex gap-2 px-5 pt-3 overflow-x-auto scrollbar-hide">
+            {people.map(p => (
+              <button
+                key={p.id}
+                onClick={() => handleSelectPerson(p.id)}
+                className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  backgroundColor: viewingPersonId === p.id ? '#a3e635' : 'rgba(255,255,255,0.15)',
+                  color: viewingPersonId === p.id ? '#1a7a4a' : 'rgba(255,255,255,0.8)',
+                }}
+              >
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Selector de días */}
-        <div className="relative z-10 flex gap-2 px-4 pt-4 pb-10 overflow-x-auto scrollbar-hide">
+        <div className="relative z-10 flex gap-2 px-4 pt-3 pb-10 overflow-x-auto scrollbar-hide">
           {weekDays.map((day) => (
             <button
               key={day.offset}
