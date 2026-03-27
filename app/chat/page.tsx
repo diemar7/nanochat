@@ -307,6 +307,22 @@ export default function ChatPage() {
       {/* SECCIÓN INFERIOR */}
       <div className="flex-1 overflow-y-auto px-4 pt-4 pb-10" style={{ backgroundColor: '#f0faf4' }}>
 
+        {/* Agenda */}
+        <button
+          onClick={() => router.push('/agenda')}
+          className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform hover:shadow-md mb-6"
+          style={{ borderLeft: '4px solid #1a7a4a' }}
+        >
+          <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl flex-shrink-0" style={{ backgroundColor: '#f0faf4' }}>
+            📅
+          </div>
+          <div className="flex-1 text-left">
+            <p className="font-semibold text-gray-800">Mi Agenda</p>
+            <p className="text-xs text-gray-400 mt-0.5">Actividades y turnos de hoy</p>
+          </div>
+          <span className="text-gray-300 text-xl">›</span>
+        </button>
+
         {/* Grupos */}
         {inGroup && (
           <>

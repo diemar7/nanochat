@@ -15,3 +15,37 @@ export type MessageReaction = {
   emoji: string
   created_at: string | null
 }
+
+export type Activity = {
+  id: string
+  person_id: string
+  name: string
+  emoji: string
+  color: string
+  type: 'recurring' | 'event'
+  notes: string | null
+  created_by: string | null
+  created_at: string
+}
+
+export type ActivitySchedule = {
+  id: string
+  activity_id: string
+  day_of_week: number // 0=domingo..6=sábado
+  time_of_day: string // HH:MM:SS
+  created_at: string
+}
+
+export type ActivityEvent = {
+  id: string
+  activity_id: string
+  date: string // YYYY-MM-DD
+  time_of_day: string | null
+  notes: string | null
+  created_at: string
+}
+
+export type ActivityWithSchedules = Activity & {
+  schedules: ActivitySchedule[]
+  events: ActivityEvent[]
+}

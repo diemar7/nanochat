@@ -129,6 +129,20 @@ Te invito a *NanoChat*, la app de la familia para chatear con Nano 💚
 
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
 
+        {/* Acceso rápido a Agenda */}
+        <button
+          onClick={() => router.push('/admin/agenda')}
+          className="w-full bg-white rounded-2xl shadow-sm px-4 py-3 flex items-center gap-3 active:scale-95 transition-transform"
+          style={{ borderLeft: '4px solid #1a7a4a' }}
+        >
+          <span className="text-2xl">📅</span>
+          <div className="flex-1 text-left">
+            <p className="font-semibold text-gray-800">Gestionar Agenda</p>
+            <p className="text-xs text-gray-400">Actividades y turnos de cada miembro</p>
+          </div>
+          <span className="text-gray-300 text-xl">›</span>
+        </button>
+
         {/* Agregar usuario */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <h2 className="font-bold text-gray-700 mb-3">Agregar miembro</h2>
