@@ -66,6 +66,7 @@ export default function GroupChatPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const audioMimeTypeRef = useRef<string>('audio/webm')
   const [headerHeight, setHeaderHeight] = useState(80)
   const [inputHeight, setInputHeight] = useState(64)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -292,7 +293,9 @@ export default function GroupChatPage() {
     if (!me) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream)
+      const mimeType = ['audio/webm', 'audio/mp4', 'audio/ogg'].find(t => MediaRecorder.isTypeSupported(t)) ?? ''
+      audioMimeTypeRef.current = mimeType
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined)
       audioChunksRef.current = []
       mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
       mr.start()
@@ -315,13 +318,15 @@ export default function GroupChatPage() {
 
     await new Promise<void>(resolve => { mr.onstop = () => resolve(); mr.stop() })
 
-    const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+    const mimeType = audioMimeTypeRef.current
+    const ext = mimeType.includes('mp4') ? 'mp4' : mimeType.includes('ogg') ? 'ogg' : 'webm'
+    const blob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' })
     if (blob.size < 1000) return
 
     setSending(true)
     const supabase = getSupabase()
-    const fileName = `${Date.now()}-${me.id}.webm`
-    const { error } = await supabase.storage.from('audios').upload(fileName, blob, { contentType: 'audio/webm' })
+    const fileName = `${Date.now()}-${me.id}.${ext}`
+    const { error } = await supabase.storage.from('audios').upload(fileName, blob, { contentType: mimeType || 'audio/webm' })
     if (error) { setSending(false); return }
     const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName)
     const replyId = replyingTo?.id ?? null
